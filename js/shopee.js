@@ -51,7 +51,7 @@ function renderFileList(listId, arr, z) {
     return '<div class="file-item">' +
       '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
       '<span class="file-item-name">' + esc(f.name) + '</span>' +
-      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="SP.editShopName(' + z + ',' + i + ')">🏷️ ' + esc(shop) + '</span>' +
+      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="SP.editShopName(' + z + ',' + i + ')"><span class="emo" aria-hidden="true">🏷️</span> ' + esc(shop) + '</span>' +
       '<span class="file-item-type">' + fmtSize(f.size) + '</span>' +
       '<button class="file-item-del" onclick="SP.removeFile(' + z + ',' + i + ',event)">' +
         '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
@@ -81,7 +81,7 @@ async function runMatch() {
 }
 
 async function runMatchInner() {
-  _$('results').style.display = 'none';
+  _$('results').hidden = true;
   KhoSync.hide('sp');
   progress(2);
 
@@ -122,6 +122,12 @@ async function runMatchInner() {
 
   var oldCount = missB.filter(function(m){ return (daysSince(m.date) || 0) >= 7; }).length;
   _$('mOld').textContent = fmtNum(oldCount);
+  // Hàng thẻ tổng kết lớn phía trên (cùng số liệu với các thẻ chi tiết bên dưới)
+  _$('sumMatched').textContent = fmtNum(matchCount);
+  _$('sumMissA').textContent = fmtNum(missA.length);
+  _$('sumMissB').textContent = fmtNum(missB.length);
+  _$('sumOld').textContent = fmtNum(oldCount);
+  _$('sumOldCard').classList.toggle('is-warn', oldCount > 0);
 
   _$('mValue').textContent = fmtNum(records.reduce(function(s,x){ return s+x.amt; }, 0)) + ' đ';
 
@@ -153,12 +159,12 @@ async function runMatchInner() {
   else warns.push({ok:true, text:rate+'% mã Shopee đã về kho — đạt yêu cầu'});
   if (missB.length) {
     warns.push({ok:false, text:fmtNum(missB.length)+' mã đã về kho nhưng Shopee chưa ghi nhận'
-      + (oldCount ? ' — trong đó '+fmtNum(oldCount)+' mã tồn ≥ 7 ngày ⚠' : '')});
+      + (oldCount ? ' — trong đó '+fmtNum(oldCount)+' mã tồn ≥ 7 ngày' : '')});
   }
   if (refundOnlyCount) warns.push({ok:true, text:'Đã loại '+fmtNum(refundOnlyCount)+' đơn hoàn tiền không có hàng trả về khỏi danh sách thất thoát'});
   if (noTidCount) warns.push({ok:false, text:fmtNum(noTidCount)+' dòng khiếu nại thiếu mã vận đơn trả — không đối soát được'});
   _$('warningArea').innerHTML = warns.map(function(w){
-    return '<span class="chip '+(w.ok?'chip-ok':'chip-warn')+'">'+(w.ok?'✓ ':'⚠ ')+esc(w.text)+'</span>';
+    return '<span class="chip '+(w.ok?'chip-ok':'chip-warn')+'">'+'<span class="emo" aria-hidden="true">'+(w.ok?'✓':'⚠')+'</span> '+esc(w.text)+'</span>';
   }).join('');
 
   /* ---- Thanh theo gian hàng ---- */
@@ -176,12 +182,12 @@ async function runMatchInner() {
         '<div class="shop-bar-track">'+
         (d.match?'<div class="shop-bar-match" style="width:'+mp+'%">'+d.match+'</div>':'')+
         (d.miss?'<div class="shop-bar-miss" style="width:'+fp+'%">'+d.miss+'</div>':'')+
-        '</div><div class="shop-bar-end" style="color:'+(d.miss?'var(--red)':'var(--green)')+'">'+
+        '</div><div class="shop-bar-end '+(d.miss?'miss':'ok')+'">'+
         (d.miss?'✗ '+d.miss:'✓')+'</div></div>';
     }).join('') || '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Không có dữ liệu</div>';
 
   /* ---- Biểu đồ ---- */
-  var labelColor = document.documentElement.getAttribute('data-theme') === 'dark' ? '#a1a1aa' : '#475569';
+  var labelColor = Theme.chartColor();
   if (shipChart) shipChart.destroy();
   shipChart = null;
   if (shipSorted.length) {
@@ -190,7 +196,7 @@ async function runMatchInner() {
       data: { labels: shipSorted.map(function(d){ return d[0]+' ('+d[1]+')'; }),
               datasets: [{ data: shipSorted.map(function(d){ return d[1]; }), backgroundColor: SHOPEE_COLORS, borderWidth: 0 }] },
       options: { responsive:true, maintainAspectRatio:false, cutout:'65%',
-                 plugins:{ legend:{ position:'right', labels:{ font:{size:10}, boxWidth:10, padding:6, color:labelColor } } } }
+                 plugins:{ legend:{ position:'right', labels:{ font:{size:13}, boxWidth:10, padding:6, color:labelColor } } } }
     });
   }
   function barChart(ref, sorted, color) {
@@ -201,8 +207,8 @@ async function runMatchInner() {
       data: { labels: top5.map(function(p){ return p[0].length>20 ? p[0].substring(0,20)+'…' : p[0]; }),
               datasets: [{ data: top5.map(function(p){ return p[1]; }), backgroundColor: color, borderRadius: 4, borderWidth: 0 }] },
       options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-                 scales:{ x:{ticks:{font:{size:10},color:labelColor},grid:{display:false}},
-                          y:{ticks:{font:{size:10},color:labelColor},grid:{display:false}} } }
+                 scales:{ x:{ticks:{font:{size:13},color:labelColor},grid:{display:false}},
+                          y:{ticks:{font:{size:13},color:labelColor},grid:{display:false}} } }
     });
   }
   if (prodChart) prodChart.destroy();
@@ -226,7 +232,8 @@ async function runMatchInner() {
   renderTableA(); renderTableB();
   progress(100);
   setTimeout(function(){ _$('pb').style.display='none'; }, 400);
-  _$('results').style.display = 'block';
+  _$('empty').hidden = true;
+  _$('results').hidden = false;
   _$('results').scrollIntoView({behavior:'smooth', block:'start'});
 
   /* ---- Kho chung: xoá mã Shopee đã khớp (sau khi người dùng đồng ý) ---- */
@@ -235,7 +242,7 @@ async function runMatchInner() {
 }
 
 function applyChartTheme() {
-  var c = document.documentElement.getAttribute('data-theme') === 'dark' ? '#a1a1aa' : '#475569';
+  var c = Theme.chartColor();
   if (shipChart) { shipChart.options.plugins.legend.labels.color = c; shipChart.update(); }
   [prodChart, provChart].forEach(function(ch) {
     if (ch) { ch.options.scales.x.ticks.color = c; ch.options.scales.y.ticks.color = c; ch.update(); }
@@ -254,14 +261,14 @@ function renderTableA() {
   _$('cntA').textContent = '('+filtered.length+')';
   _$('btnExportA').style.display = resultMissA.length ? 'inline-flex' : 'none';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">✅ Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
     pager.innerHTML = ''; return;
   }
   var totalPages = Math.ceil(filtered.length/pageSize), start = (pageA-1)*pageSize;
   tbody.innerHTML = filtered.slice(start, start+pageSize).map(function(r, i) {
     return '<tr><td>'+(start+i+1)+'</td>'+
       '<td><span class="shop-tag">'+esc(r.shop)+'</span></td>'+
-      '<td><span class="type-tag">'+(r.kind==='don'?'Đơn hàng':r.kind==='khieunai'?'Khiếu nại':'📂 Xuất lại')+'</span></td>'+
+      '<td><span class="type-tag">'+(r.kind==='don'?'Đơn hàng':r.kind==='khieunai'?'Khiếu nại':'<span class="emo" aria-hidden="true">📂</span> Xuất lại')+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td><code style="opacity:.7">'+esc(r.oid||'—')+'</code></td>'+
       '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">'+esc(r.prod||'—')+'</td>'+
@@ -276,7 +283,7 @@ function renderTableB() {
   var filtered = resultMissB.filter(function(m){ return m.id.toLowerCase().indexOf(searchStrB) >= 0; });
   _$('cntB').textContent = '('+filtered.length+')';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">✅ Mọi mã trong kho đều có chứng từ Shopee</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="emo" aria-hidden="true">✅</span> Mọi mã trong kho đều có chứng từ Shopee</td></tr>';
     pager.innerHTML = ''; return;
   }
   var totalPages = Math.ceil(filtered.length/pageSize), start = (pageB-1)*pageSize;
@@ -285,9 +292,9 @@ function renderTableB() {
     var isOld = days !== null && days >= 7;
     return '<tr><td>'+(start+i+1)+'</td>'+
       '<td><code>'+esc(m.id)+'</code></td>'+
-      '<td>'+(isOld ? '<span class="badge-old">📅 '+esc(m.date)+'</span>' : '<span class="badge-new">📅 '+esc(m.date)+'</span>')+'</td>'+
-      '<td style="font-weight:700;color:'+(isOld?'var(--red)':'var(--text-secondary)')+'">'+(days===null?'—':days+' ngày')+'</td>'+
-      '<td>'+(isOld?'<span class="badge-red">⚠ Tồn lâu</span>':'<span class="badge-amber">Chưa có chứng từ</span>')+'</td></tr>';
+      '<td>'+(isOld ? '<span class="badge-old"><span class="emo" aria-hidden="true">📅</span> '+esc(m.date)+'</span>' : '<span class="badge-new"><span class="emo" aria-hidden="true">📅</span> '+esc(m.date)+'</span>')+'</td>'+
+      '<td class="'+(isOld?'days-old':'days-new')+'">'+(days===null?'—':days+' ngày')+'</td>'+
+      '<td>'+(isOld?'<span class="badge-red"><span class="emo" aria-hidden="true">⚠</span> Tồn lâu</span>':'<span class="badge-amber">Chưa có chứng từ</span>')+'</td></tr>';
   }).join('');
   UI.renderPager(pager, pageB, totalPages, function(p){ pageB=p; renderTableB(); });
 }

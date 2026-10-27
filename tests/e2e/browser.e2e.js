@@ -52,9 +52,9 @@ async function newPage(browser, port, configured, viewport) {
     route.fulfill({ body: fs.readFileSync(file), contentType: 'text/javascript' });
   });
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
-  if (configured) {
-    await page.route('**/js/config.js', (r) => r.fulfill({ body: "var API_URL = 'http://localhost:" + port + "/exec';", contentType: 'text/javascript' }));
-  }
+  // Luôn thay js/config.js: không bao giờ gọi Web app thật khi chạy test.
+  await page.route('**/js/config.js', (r) => r.fulfill({
+    body: "var API_URL = '" + (configured ? 'http://localhost:' + port + '/exec' : '') + "';", contentType: 'text/javascript' }));
   await page.goto('http://localhost:' + port + '/');
   return page;
 }
@@ -95,8 +95,9 @@ async function main() {
 
     /* ---- Đã cấu hình ---- */
     page = await newPage(browser, port, true);
-    await page.locator('#khoStatus', { hasText: 'Chưa ai tải kho' }).waitFor();
-    assert.match(await page.locator('#khoStatus').innerText(), /Chưa tải kho tuần này/);
+    await page.locator('#st_lastWho', { hasText: 'Chưa ai tải' }).waitFor();
+    assert.equal(await page.textContent('#st_count'), '0');
+    assert.match(await page.locator('#st_week').innerText(), /Chưa tải kho tuần này/);
     step('Kho trống: nhãn vàng "Chưa tải kho tuần này"');
 
     // Tab Kho: dán Zalo + file
@@ -106,8 +107,11 @@ async function main() {
       '[QR]: 862330000001', '[C128] 862330000002', '[QR]: SPXVN00000004', '[QR]: 862330000001', '[QR]: ABC', 'rác'
     ].join('\n'));
     await page.setInputFiles('#kho_inp', [xlsxFile('scan.xlsx', [['Báo cáo'], [], ['Symbology', 'Code', 'Timestamp'], ['QR', 'VNGH00000003', 1729500000000], ['QR', 'XOAMANAY01', 1]])]);
+    assert.ok(await page.locator('#kho_step2.is-idle').count(), 'bước 2 mờ khi chưa xử lý');
+    assert.ok(await page.locator('#kho_step3.is-idle').count(), 'bước 3 mờ khi chưa xử lý');
     await page.click('text=Xử lý & xem trước');
-    await page.locator('#kho_results').waitFor();
+    await page.locator('#kho_step2:not(.is-idle) #kho_results').waitFor();
+    await page.locator('#kho_step3:not(.is-idle)').waitFor();
     assert.equal(await page.textContent('#kho_sUnique'), '5');
     assert.equal(await page.textContent('#kho_sDup'), '1');
     assert.equal(await page.textContent('#kho_sNew'), '5');
@@ -115,9 +119,13 @@ async function main() {
     assert.equal(await page.textContent('#kho_sUnique'), '4');
     await page.screenshot({ path: path.join(OUT, '1-kho-xem-truoc.png'), fullPage: true });
     await page.click('#kho_btnSave');
-    await page.locator('#khoStatus', { hasText: 'bởi Lan' }).waitFor();
-    assert.match(await page.locator('#khoStatus').innerText(), /4 mã trong kho/);
-    assert.match(await page.locator('#khoStatus').innerText(), /Tuần này đã có người tải kho/);
+    await page.locator('#st_lastWho', { hasText: 'Lan' }).waitFor();
+    assert.equal(await page.textContent('#st_count'), '4');
+    assert.match(await page.locator('#st_week').innerText(), /Đã có người tải kho/);
+    assert.match(await page.textContent('#st_lastWhen'), /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} · 4 mã$/);
+    assert.equal(await page.textContent('#st_old'), '0');
+    assert.ok(!(await page.locator('#st_oldCard.is-warn').count()));
+    assert.ok(await page.locator('#kho_step2.is-idle').count(), 'lưu xong thì bước 2 về trạng thái chờ');
     assert.equal(ctl.lastContentType, 'text/plain;charset=utf-8');
     assert.deepEqual(codes(ctl), ['862330000001', '862330000002', 'SPXVN00000004', 'VNGH00000003']);
     assert.equal(await page.inputValue('#kho_input'), '', 'lưu xong thì xoá bản nháp');
@@ -131,7 +139,7 @@ async function main() {
     await page.locator('.modal', { hasText: 'Gộp thêm vào kho' }).waitFor();
     await page.screenshot({ path: path.join(OUT, '2-hoi-gop-thay.png') });
     await modalClick(page, 'Gộp thêm vào kho');
-    await page.locator('#khoStatus', { hasText: '5 mã trong kho' }).waitFor();
+    await page.locator('#st_count', { hasText: '5' }).waitFor();
     step('Kho có dữ liệu: hỏi Gộp/Thay thế, gộp giữ mã cũ');
 
     // Lỗi máy chủ: báo rõ, giữ nguyên dữ liệu vừa nhập
@@ -163,6 +171,8 @@ async function main() {
       ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM'],
       ['DH3', 'SPXVN99999999', 'SPX', 'Quần', 'L', '70000.00', 'HCM']
     ])]);
+    assert.ok(await page.isVisible('#sp_empty'), 'chưa đối soát: hiện trạng thái rỗng');
+    assert.ok(!(await page.isVisible('#sp_results')));
     await page.click('#sp_btnRun');
     await page.locator('.modal', { hasText: 'Sẽ xoá 2 mã đã khớp khỏi kho chung' }).waitFor();
     await page.screenshot({ path: path.join(OUT, '3-shopee-xac-nhan.png') });
@@ -170,6 +180,9 @@ async function main() {
     await page.locator('#sp_syncBox.done').waitFor();
     assert.deepEqual(codes(ctl), ['862330000002', 'GYABC123', 'VNGH00000003']);
     assert.equal(await page.textContent('#sp_mMissA'), '1');
+    assert.ok(!(await page.isVisible('#sp_empty')), 'có kết quả: ẩn trạng thái rỗng');
+    assert.deepEqual(await Promise.all(['Matched', 'MissA', 'MissB', 'Old'].map((k) => page.textContent('#sp_sum' + k))), ['2', '1', '3', '0']);
+    assert.ok(!(await page.locator('#sp_sumOldCard.is-warn').count()));
     const ls = ctl.gas.get().lichSu[0];
     assert.equal(ls.hanhDong, 'Đối soát Shopee');
     assert.equal(ls.nguoi, 'Lan');
@@ -215,7 +228,7 @@ async function main() {
     await page.click('#kho_btnUndo');
     await page.locator('.modal', { hasText: 'Đối soát TikTok' }).waitFor();
     await modalClick(page, 'Hoàn tác');
-    await page.locator('#khoStatus', { hasText: '3 mã trong kho' }).waitFor();
+    await page.locator('#st_count', { hasText: '3' }).waitFor();
     assert.ok(codes(ctl).includes('862330000002'));
     await page.locator('#kho_history tr', { hasText: 'Hoàn tác' }).first().waitFor();
     await page.screenshot({ path: path.join(OUT, '5-lich-su.png'), fullPage: true });
@@ -227,19 +240,182 @@ async function main() {
     assert.equal(kxRows.length, 4);
     step('Tải kho về Excel để sao lưu');
 
-    /* ---- Theme tối + màn hình điện thoại ---- */
-    await page.click('#theme-toggle');
-    assert.equal(await page.getAttribute('html', 'data-theme'), 'dark');
-    await page.screenshot({ path: path.join(OUT, '6-toi.png') });
-    const mobile = await newPage(browser, port, true, { width: 390, height: 844 });
-    await mobile.locator('#khoStatus', { hasText: 'mã trong kho' }).waitFor();
+    /* ---- Chủ đề (theme) ---- */
+    assert.equal(await page.getAttribute('html', 'data-theme'), 'meo-light', 'mặc định: Mèo con, Sáng');
+    assert.equal(await page.locator('#theme-toggle').count(), 0, 'đã bỏ nút sáng/tối cũ');
+    assert.ok(await page.isVisible('#platBtn_kho .tab-ico'), 'Mèo con: tab có con vật');
+    assert.match(await page.locator('#toast').innerText(), /^Xong rồi nè 🐻 /, 'Mèo con: thông báo thành công có con vật');
+    // Thẻ "Tồn từ 7 ngày" tô cảnh báo khi có mã cũ
+    ctl.gas.post({ action: 'upload', cheDo: 'gop', nguoi: 'Cũ', items: [{ ma: 'CU0000000001', ngay: '01/10/2026' }] });
+    await page.click('#st_refresh');
+    await page.locator('#st_oldCard.is-warn').waitFor();
+    assert.equal(await page.textContent('#st_old'), '1');
+    step('Mặc định Mèo con Sáng, có con vật; thẻ "Tồn từ 7 ngày" tô cảnh báo khi > 0');
+
+    // Màu nhấn đổi theo tab đang xem
     for (const t of ['kho', 'sp', 'tt']) {
-      await mobile.click('#platBtn_' + t);
-      const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-      assert.ok(over <= 0, 'tab ' + t + ' tràn ngang ' + over + 'px');
+      await page.click('#platBtn_' + t);
+      const c = await page.evaluate((t) => {
+        const probe = document.createElement('div');
+        probe.style.background = 'var(--' + t + ')';
+        document.body.appendChild(probe);
+        const want = getComputedStyle(probe).backgroundColor; probe.remove();
+        return { want, tab: getComputedStyle(document.getElementById('platBtn_' + t)).backgroundColor,
+          btn: getComputedStyle(document.querySelector('#pane_' + t + ' .btn-main')).backgroundColor,
+          accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() };
+      }, t);
+      assert.equal(c.tab, c.want, 'tab ' + t + ' tô màu riêng');
+      assert.equal(c.btn, c.want, 'nút chính tab ' + t + ' lấy màu tab');
     }
-    await mobile.screenshot({ path: path.join(OUT, '7-dien-thoai.png'), fullPage: true });
-    step('Theme tối; điện thoại 390px không tràn ngang ở cả 3 tab');
+    const colours = await page.evaluate(() => ['kho', 'sp', 'tt'].map((t) => getComputedStyle(document.getElementById('platBtn_' + t)).getPropertyValue('--c').trim()));
+    assert.equal(new Set(colours).size, 3);
+    step('Tab đang chọn tô màu riêng, nút chính đổi màu theo tab');
+
+    // Chuẩn bị trang để quét: tab Kho có bảng xem trước, Shopee/TikTok có kết quả
+    await page.click('#platBtn_kho');
+    await page.fill('#kho_input', '[QR]: 862330000099\n[QR]: AB1');
+    await page.click('text=Xử lý & xem trước');
+    await page.locator('#kho_step3:not(.is-idle)').waitFor();
+
+    const ANIMALS = /[\u{1F400}-\u{1F43F}\u{1F980}-\u{1F9AE}]/u;
+    const visibleText = (p) => p.evaluate(() => {
+      const t = document.getElementById('toast'); const keep = t.textContent; t.textContent = '';
+      const out = document.body.innerText; t.textContent = keep; return out;
+    });
+    const scanContrast = (p) => p.evaluate(() => {
+      const parse = (c) => { const n = c.match(/[\d.]+/g).map(Number); return { r: n[0], g: n[1], b: n[2], a: n.length > 3 ? n[3] : 1 }; };
+      const lum = (c) => [c.r, c.g, c.b].map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+        .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const blend = (top, bot) => ({ r: top.r * top.a + bot.r * (1 - top.a), g: top.g * top.a + bot.g * (1 - top.a), b: top.b * top.a + bot.b * (1 - top.a), a: 1 });
+      const bgOf = (el) => {
+        const layers = [];
+        for (let e = el; e; e = e.parentElement) {
+          const c = parse(getComputedStyle(e).backgroundColor);
+          if (c.a > 0) { layers.push(c); if (c.a >= 1) break; }
+        }
+        let base = layers.length && layers[layers.length - 1].a >= 1 ? layers.pop() : { r: 255, g: 255, b: 255, a: 1 };
+        while (layers.length) base = blend(layers.pop(), base);
+        return base;
+      };
+      const fails = []; let checked = 0;
+      for (const el of document.querySelectorAll('body *')) {
+        if (['SCRIPT', 'STYLE', 'svg', 'CANVAS'].includes(el.tagName) || el.closest('svg, .sr-only')) continue;
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own || !el.getClientRects().length) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility !== 'visible') continue;
+        let op = 1; for (let e = el; e; e = e.parentElement) op *= +getComputedStyle(e).opacity;
+        if (op === 0) continue;
+        const fg = parse(cs.color), bg = bgOf(el);
+        const a = lum(fg), b = lum(bg), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        checked++;
+        if (ratio < 4.5) fails.push(el.tagName + '.' + el.className + ' "' + el.textContent.trim().slice(0, 30) + '" ' + ratio.toFixed(2));
+      }
+      return { fails, checked };
+    });
+
+    const VARIANTS = [['meo', 'sang'], ['meo', 'toi'], ['vintage', 'sang'], ['vintage', 'toi'], ['toigian', 'sang'], ['toigian', 'toi']];
+    for (const [chuDe, cheDo] of VARIANTS) {
+      const name = chuDe + '-' + (cheDo === 'toi' ? 'dark' : 'light');
+      await page.click('#themeBtn');
+      await page.locator('#themePanel').waitFor();
+      assert.equal(await page.locator('#themePanel .theme-opt').count(), 3);
+      assert.equal(await page.locator('#themePanel .theme-opt .sw').count(), 12, 'mỗi chủ đề có ô màu xem trước');
+      await page.click('#themePanel .theme-opt[data-chu-de="' + chuDe + '"]');
+      if (await page.isChecked('#themeDark') !== (cheDo === 'toi')) await page.click('#themePanel .mode-switch');
+      assert.equal(await page.getAttribute('html', 'data-theme'), name);
+      const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('doiSoat_chuDe_v1')));
+      assert.deepEqual(saved, { chuDe, cheDo });
+      const panelScan = await scanContrast(page);
+      assert.deepEqual(panelScan.fails, [], name + ' hộp chọn chủ đề');
+      await page.keyboard.press('Escape');
+      await page.locator('#themePanel').waitFor({ state: 'hidden' });
+
+      for (const t of ['kho', 'sp', 'tt']) {
+        await page.click('#platBtn_' + t);
+        const r = await scanContrast(page);
+        assert.ok(r.checked > 40, name + ' ' + t + ' quét ' + r.checked + ' phần tử');
+        assert.deepEqual(r.fails, [], name + ' tab ' + t);
+        const text = await visibleText(page);
+        if (chuDe !== 'meo') assert.ok(!ANIMALS.test(text), name + ' ' + t + ': không được có con vật');
+        if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(text), name + ' ' + t + ': không emoji');
+        if (chuDe === 'meo') {
+          const tables = await page.evaluate((t) => [...document.querySelectorAll('#pane_' + t + ' table, #pane_' + t + ' .chart-card')].map((e) => e.innerText).join(' '), t);
+          assert.ok(!ANIMALS.test(tables), name + ': không con vật trong bảng/biểu đồ');
+        }
+        if (t !== 'kho') {
+          const chart = await page.evaluate((t) => {
+            const ch = Chart.getChart(document.getElementById(t + '_chartShip'));
+            return { got: ch.options.plugins.legend.labels.color, want: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() };
+          }, t);
+          assert.equal(chart.got.toLowerCase(), chart.want.toLowerCase(), name + ': màu nhãn biểu đồ theo theme');
+        }
+      }
+      // Hộp xác nhận
+      await page.click('#platBtn_kho');
+      await page.click('#kho_btnUndo');
+      await page.locator('.modal').waitFor();
+      assert.deepEqual((await scanContrast(page)).fails, [], name + ' hộp xác nhận');
+      await modalClick(page, 'Huỷ');
+      await page.screenshot({ path: path.join(OUT, 'theme-' + name + '.png'), fullPage: true });
+    }
+    step('6 biến thể: chọn qua 🎨, lưu localStorage, tương phản ≥ 4.5:1 trên mọi chữ (cả hộp thoại), không con vật ở Vintage/Tối giản, không emoji ở Tối giản, nhãn biểu đồ đổi màu');
+
+    // Lưu và khôi phục sau khi tải lại trang
+    await page.reload();
+    assert.equal(await page.getAttribute('html', 'data-theme'), 'toigian-dark');
+    step('Tải lại trang: giữ chủ đề đã chọn');
+
+    // Áp theme trước khi vẽ: data-theme đã có ngay khi DOM bắt đầu dựng
+    const early = await browser.newPage();
+    await early.addInitScript(() => {
+      localStorage.setItem('doiSoat_chuDe_v1', JSON.stringify({ chuDe: 'vintage', cheDo: 'toi' }));
+      document.addEventListener('readystatechange', () => {
+        if (document.readyState === 'interactive') window.__themeAtInteractive = document.documentElement.getAttribute('data-theme');
+      });
+      new MutationObserver((ms, obs) => {
+        if (document.body) { window.__themeAtBody = document.documentElement.getAttribute('data-theme'); obs.disconnect(); }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await early.route('**/js/config.js', (r) => r.fulfill({ body: "var API_URL = '';", contentType: 'text/javascript' }));
+    await early.route('https://cdnjs.cloudflare.com/**', (r) => r.fulfill({ body: '', contentType: 'text/javascript' }));
+    await early.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
+    await early.goto('http://localhost:' + port + '/');
+    assert.equal(await early.evaluate(() => window.__themeAtBody), 'vintage-dark', 'theme có trước khi dựng <body>');
+    await early.close();
+    step('Áp theme đã lưu trước khi vẽ <body> (không nháy màu)');
+
+    // Giá trị lưu sai -> Mèo con, Sáng
+    for (const bad of ['{"chuDe":"hong","cheDo":"sang"}', '{"chuDe":"meo","cheDo":"tim"}', 'không phải json', '[]', 'null']) {
+      const p = await browser.newPage();
+      await p.addInitScript((v) => localStorage.setItem('doiSoat_chuDe_v1', v), bad);
+      await p.route('**/js/config.js', (r) => r.fulfill({ body: "var API_URL = '';", contentType: 'text/javascript' }));
+      await p.route('https://cdnjs.cloudflare.com/**', (r) => r.fulfill({ body: '', contentType: 'text/javascript' }));
+      await p.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
+      await p.goto('http://localhost:' + port + '/');
+      assert.equal(await p.getAttribute('html', 'data-theme'), 'meo-light', 'giá trị sai: ' + bad);
+      await p.close();
+    }
+    step('Giá trị lưu sai -> về mặc định Mèo con, Sáng');
+
+    /* ---- Điện thoại: cả 6 biến thể, cả 3 tab ---- */
+    const mobile = await newPage(browser, port, true, { width: 390, height: 844 });
+    await mobile.locator('#st_count', { hasText: /^\d+$/ }).waitFor();
+    for (const [chuDe, cheDo] of VARIANTS) {
+      await mobile.evaluate((t) => Theme.set(t), { chuDe, cheDo });
+      for (const t of ['kho', 'sp', 'tt']) {
+        await mobile.click('#platBtn_' + t);
+        const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(over <= 0, chuDe + '-' + cheDo + ' tab ' + t + ' tràn ngang ' + over + 'px');
+      }
+      await mobile.click('#themeBtn');
+      const box = await mobile.locator('#themePanel').boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 390, 'hộp chọn chủ đề nằm trong màn hình');
+      await mobile.keyboard.press('Escape');
+      await mobile.click('#platBtn_kho');
+      await mobile.screenshot({ path: path.join(OUT, 'dien-thoai-' + chuDe + '-' + cheDo + '.png'), fullPage: false });
+    }
+    step('Điện thoại 390px: 6 biến thể × 3 tab không tràn ngang, hộp chọn chủ đề vừa màn hình');
   } finally {
     await browser.close();
     srv.close();
