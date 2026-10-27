@@ -1,0 +1,58 @@
+/* =====================================================================
+   Bảng màu (biến CSS). css/app.css chỉ dùng các biến này, không có mã
+   màu riêng. Bản này có Sáng (mặc định) và Tối.
+   ===================================================================== */
+:root {
+  --bg: #F8FAFC; --surface: #FFFFFF; --surface-2: #F1F5F9; --input-bg: #FFFFFF;
+  --border: #E2E8F0; --border-strong: #94A3B8;
+  --text: #0F172A; --text-2: #334155; --text-muted: #5B6676;
+  --topbar-bg: #0F172A; --topbar-text: #F8FAFC;
+
+  --kho: #2563EB; --on-kho: #FFFFFF; --ink-kho: #1D4ED8; --deep-kho: #1E40AF;
+  --sp:  #C2410C; --on-sp:  #FFFFFF; --ink-sp:  #C2410C; --deep-sp:  #9A3412;
+  --tt:  #BE185D; --on-tt:  #FFFFFF; --ink-tt:  #BE185D; --deep-tt:  #9D174D;
+
+  --ok: #15803D; --on-ok: #FFFFFF; --err: #DC2626; --on-err: #FFFFFF; --warn: #D97706;
+  --ok-bg: #ECFDF5; --ok-ink: #166534; --ok-line: #86EFAC;
+  --warn-bg: #FEF3C7; --warn-ink: #92400E; --warn-line: #FCD34D;
+  --err-bg: #FEE2E2; --err-ink: #B91C1C; --err-line: #FCA5A5;
+  --info-bg: #EFF6FF; --info-ink: #1D4ED8; --info-line: #BFDBFE;
+
+  --toast-bg: #0F172A; --toast-text: #F8FAFC;
+  --chart-text: #334155; --chart-grid: #E2E8F0;
+  --focus: #2563EB; --overlay: rgba(15, 23, 42, .55);
+
+  --shadow: 0 1px 3px rgba(15, 23, 42, .08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, .18);
+  --btn-shadow-y: 0px;
+  --radius: 12px; --radius-sm: 8px; --radius-pill: 999px;
+  --bw: 1px; --card-bw: 1px; --bstyle: solid;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: var(--font-ui);
+  --font-head: var(--font-ui);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: uppercase; --title-spacing: .06em;
+}
+
+[data-theme="dark"] {
+  --bg: #0B1220; --surface: #111A2E; --surface-2: #1A2540; --input-bg: #0B1220;
+  --border: #26324D; --border-strong: #52617F;
+  --text: #F1F5F9; --text-2: #CBD5E1; --text-muted: #A3AEC2;
+  --topbar-bg: #020617; --topbar-text: #F1F5F9;
+
+  --kho: #60A5FA; --on-kho: #0B1220; --ink-kho: #93C5FD; --deep-kho: #2563EB;
+  --sp:  #FB923C; --on-sp:  #1C0A02; --ink-sp:  #FDBA74; --deep-sp:  #C2410C;
+  --tt:  #F472B6; --on-tt:  #1F0614; --ink-tt:  #F9A8D4; --deep-tt:  #BE185D;
+
+  --ok: #4ADE80; --on-ok: #052E16; --err: #F87171; --on-err: #2A0707; --warn: #FBBF24;
+  --ok-bg: #0F2E22; --ok-ink: #86EFAC; --ok-line: #166534;
+  --warn-bg: #33250A; --warn-ink: #FCD34D; --warn-line: #92400E;
+  --err-bg: #3A1212; --err-ink: #FCA5A5; --err-line: #991B1B;
+  --info-bg: #13264A; --info-ink: #93C5FD; --info-line: #1E40AF;
+
+  --toast-bg: #F1F5F9; --toast-text: #0F172A;
+  --chart-text: #CBD5E1; --chart-grid: #26324D;
+  --focus: #93C5FD; --overlay: rgba(0, 0, 0, .65);
+  --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+}

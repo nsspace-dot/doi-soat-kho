@@ -52,9 +52,9 @@ async function newPage(browser, port, configured, viewport) {
     route.fulfill({ body: fs.readFileSync(file), contentType: 'text/javascript' });
   });
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
-  if (configured) {
-    await page.route('**/js/config.js', (r) => r.fulfill({ body: "var API_URL = 'http://localhost:" + port + "/exec';", contentType: 'text/javascript' }));
-  }
+  // Luôn thay js/config.js: không bao giờ gọi Web app thật khi chạy test.
+  await page.route('**/js/config.js', (r) => r.fulfill({
+    body: "var API_URL = '" + (configured ? 'http://localhost:' + port + '/exec' : '') + "';", contentType: 'text/javascript' }));
   await page.goto('http://localhost:' + port + '/');
   return page;
 }
@@ -95,8 +95,9 @@ async function main() {
 
     /* ---- Đã cấu hình ---- */
     page = await newPage(browser, port, true);
-    await page.locator('#khoStatus', { hasText: 'Chưa ai tải kho' }).waitFor();
-    assert.match(await page.locator('#khoStatus').innerText(), /Chưa tải kho tuần này/);
+    await page.locator('#st_lastWho', { hasText: 'Chưa ai tải' }).waitFor();
+    assert.equal(await page.textContent('#st_count'), '0');
+    assert.match(await page.locator('#st_week').innerText(), /Chưa tải kho tuần này/);
     step('Kho trống: nhãn vàng "Chưa tải kho tuần này"');
 
     // Tab Kho: dán Zalo + file
@@ -106,8 +107,11 @@ async function main() {
       '[QR]: 862330000001', '[C128] 862330000002', '[QR]: SPXVN00000004', '[QR]: 862330000001', '[QR]: ABC', 'rác'
     ].join('\n'));
     await page.setInputFiles('#kho_inp', [xlsxFile('scan.xlsx', [['Báo cáo'], [], ['Symbology', 'Code', 'Timestamp'], ['QR', 'VNGH00000003', 1729500000000], ['QR', 'XOAMANAY01', 1]])]);
+    assert.ok(await page.locator('#kho_step2.is-idle').count(), 'bước 2 mờ khi chưa xử lý');
+    assert.ok(await page.locator('#kho_step3.is-idle').count(), 'bước 3 mờ khi chưa xử lý');
     await page.click('text=Xử lý & xem trước');
-    await page.locator('#kho_results').waitFor();
+    await page.locator('#kho_step2:not(.is-idle) #kho_results').waitFor();
+    await page.locator('#kho_step3:not(.is-idle)').waitFor();
     assert.equal(await page.textContent('#kho_sUnique'), '5');
     assert.equal(await page.textContent('#kho_sDup'), '1');
     assert.equal(await page.textContent('#kho_sNew'), '5');
@@ -115,9 +119,13 @@ async function main() {
     assert.equal(await page.textContent('#kho_sUnique'), '4');
     await page.screenshot({ path: path.join(OUT, '1-kho-xem-truoc.png'), fullPage: true });
     await page.click('#kho_btnSave');
-    await page.locator('#khoStatus', { hasText: 'bởi Lan' }).waitFor();
-    assert.match(await page.locator('#khoStatus').innerText(), /4 mã trong kho/);
-    assert.match(await page.locator('#khoStatus').innerText(), /Tuần này đã có người tải kho/);
+    await page.locator('#st_lastWho', { hasText: 'Lan' }).waitFor();
+    assert.equal(await page.textContent('#st_count'), '4');
+    assert.match(await page.locator('#st_week').innerText(), /Đã có người tải kho/);
+    assert.match(await page.textContent('#st_lastWhen'), /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} · 4 mã$/);
+    assert.equal(await page.textContent('#st_old'), '0');
+    assert.ok(!(await page.locator('#st_oldCard.is-warn').count()));
+    assert.ok(await page.locator('#kho_step2.is-idle').count(), 'lưu xong thì bước 2 về trạng thái chờ');
     assert.equal(ctl.lastContentType, 'text/plain;charset=utf-8');
     assert.deepEqual(codes(ctl), ['862330000001', '862330000002', 'SPXVN00000004', 'VNGH00000003']);
     assert.equal(await page.inputValue('#kho_input'), '', 'lưu xong thì xoá bản nháp');
@@ -131,7 +139,7 @@ async function main() {
     await page.locator('.modal', { hasText: 'Gộp thêm vào kho' }).waitFor();
     await page.screenshot({ path: path.join(OUT, '2-hoi-gop-thay.png') });
     await modalClick(page, 'Gộp thêm vào kho');
-    await page.locator('#khoStatus', { hasText: '5 mã trong kho' }).waitFor();
+    await page.locator('#st_count', { hasText: '5' }).waitFor();
     step('Kho có dữ liệu: hỏi Gộp/Thay thế, gộp giữ mã cũ');
 
     // Lỗi máy chủ: báo rõ, giữ nguyên dữ liệu vừa nhập
@@ -163,6 +171,8 @@ async function main() {
       ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM'],
       ['DH3', 'SPXVN99999999', 'SPX', 'Quần', 'L', '70000.00', 'HCM']
     ])]);
+    assert.ok(await page.isVisible('#sp_empty'), 'chưa đối soát: hiện trạng thái rỗng');
+    assert.ok(!(await page.isVisible('#sp_results')));
     await page.click('#sp_btnRun');
     await page.locator('.modal', { hasText: 'Sẽ xoá 2 mã đã khớp khỏi kho chung' }).waitFor();
     await page.screenshot({ path: path.join(OUT, '3-shopee-xac-nhan.png') });
@@ -170,6 +180,9 @@ async function main() {
     await page.locator('#sp_syncBox.done').waitFor();
     assert.deepEqual(codes(ctl), ['862330000002', 'GYABC123', 'VNGH00000003']);
     assert.equal(await page.textContent('#sp_mMissA'), '1');
+    assert.ok(!(await page.isVisible('#sp_empty')), 'có kết quả: ẩn trạng thái rỗng');
+    assert.deepEqual(await Promise.all(['Matched', 'MissA', 'MissB', 'Old'].map((k) => page.textContent('#sp_sum' + k))), ['2', '1', '3', '0']);
+    assert.ok(!(await page.locator('#sp_sumOldCard.is-warn').count()));
     const ls = ctl.gas.get().lichSu[0];
     assert.equal(ls.hanhDong, 'Đối soát Shopee');
     assert.equal(ls.nguoi, 'Lan');
@@ -215,7 +228,7 @@ async function main() {
     await page.click('#kho_btnUndo');
     await page.locator('.modal', { hasText: 'Đối soát TikTok' }).waitFor();
     await modalClick(page, 'Hoàn tác');
-    await page.locator('#khoStatus', { hasText: '3 mã trong kho' }).waitFor();
+    await page.locator('#st_count', { hasText: '3' }).waitFor();
     assert.ok(codes(ctl).includes('862330000002'));
     await page.locator('#kho_history tr', { hasText: 'Hoàn tác' }).first().waitFor();
     await page.screenshot({ path: path.join(OUT, '5-lich-su.png'), fullPage: true });
@@ -232,7 +245,7 @@ async function main() {
     assert.equal(await page.getAttribute('html', 'data-theme'), 'dark');
     await page.screenshot({ path: path.join(OUT, '6-toi.png') });
     const mobile = await newPage(browser, port, true, { width: 390, height: 844 });
-    await mobile.locator('#khoStatus', { hasText: 'mã trong kho' }).waitFor();
+    await mobile.locator('#st_count', { hasText: /^\d+$/ }).waitFor();
     for (const t of ['kho', 'sp', 'tt']) {
       await mobile.click('#platBtn_' + t);
       const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

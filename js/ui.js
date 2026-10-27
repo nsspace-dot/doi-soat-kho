@@ -74,6 +74,7 @@ var UI = (function () {
   /* ---------- kéo thả file ---------- */
   function setupDropZone(zone, input, onFiles) {
     zone.addEventListener('click', function () { input.click(); });
+    zone.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
     zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('dragover'); });
     zone.addEventListener('dragleave', function () { zone.classList.remove('dragover'); });
     zone.addEventListener('drop', function (e) { e.preventDefault(); zone.classList.remove('dragover'); onFiles(e.dataTransfer.files); });

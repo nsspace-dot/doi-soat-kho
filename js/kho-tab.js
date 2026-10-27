@@ -47,10 +47,10 @@ var KhoTab = (function () {
     var c = KhoInput.combine(entries);
     rows = c.rows; skipped = skip; page = 1; search = ''; $('kho_search').value = '';
     stats = { total: entries.length, dup: c.dupCount };
-    $('kho_results').style.display = 'block';
+    setIdle('kho_step2', false);
     if (errors.length) UI.alert('Có file không dùng được', errors.map(esc).join('<br><br>'));
     render();
-    $('kho_results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('kho_step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function clearAll() {
@@ -58,8 +58,12 @@ var KhoTab = (function () {
     UI.memDel(DRAFT_KEY);
     files = []; rows = []; skipped = []; stats = null;
     renderFiles();
-    $('kho_results').style.display = 'none';
+    setIdle('kho_step2', true);
+    setIdle('kho_step3', true);
   }
+
+  // Bước chưa tới: thẻ mờ đi, chỉ hiện một dòng hướng dẫn.
+  function setIdle(id, idle) { $(id).classList.toggle('is-idle', idle); }
 
   function filtered() {
     if (!search) return rows;
@@ -108,6 +112,7 @@ var KhoTab = (function () {
     }).join('') : '<tr class="empty-row"><td colspan="7">Không có mã nào khớp tìm kiếm.</td></tr>';
     UI.renderPager($('kho_pager'), page, totalPages, function (p) { page = p; render(); });
 
+    setIdle('kho_step3', !valid.length);
     $('kho_btnSave').disabled = saving || !valid.length;
     $('kho_saveHint').textContent = valid.length
       ? 'Sẽ gửi ' + fmtNum(valid.length) + ' mã hợp lệ' + (newCount !== null ? ' (' + fmtNum(newCount) + ' mã mới)' : '') + '. Mã mới nhận ngày đối soát hôm nay.'

@@ -81,7 +81,7 @@ async function runMatch() {
 }
 
 async function runMatchInner() {
-  _$('results').style.display = 'none';
+  _$('results').hidden = true;
   KhoSync.hide('sp');
   progress(2);
 
@@ -122,6 +122,12 @@ async function runMatchInner() {
 
   var oldCount = missB.filter(function(m){ return (daysSince(m.date) || 0) >= 7; }).length;
   _$('mOld').textContent = fmtNum(oldCount);
+  // Hàng thẻ tổng kết lớn phía trên (cùng số liệu với các thẻ chi tiết bên dưới)
+  _$('sumMatched').textContent = fmtNum(matchCount);
+  _$('sumMissA').textContent = fmtNum(missA.length);
+  _$('sumMissB').textContent = fmtNum(missB.length);
+  _$('sumOld').textContent = fmtNum(oldCount);
+  _$('sumOldCard').classList.toggle('is-warn', oldCount > 0);
 
   _$('mValue').textContent = fmtNum(records.reduce(function(s,x){ return s+x.amt; }, 0)) + ' đ';
 
@@ -176,7 +182,7 @@ async function runMatchInner() {
         '<div class="shop-bar-track">'+
         (d.match?'<div class="shop-bar-match" style="width:'+mp+'%">'+d.match+'</div>':'')+
         (d.miss?'<div class="shop-bar-miss" style="width:'+fp+'%">'+d.miss+'</div>':'')+
-        '</div><div class="shop-bar-end" style="color:'+(d.miss?'var(--red)':'var(--green)')+'">'+
+        '</div><div class="shop-bar-end '+(d.miss?'miss':'ok')+'">'+
         (d.miss?'✗ '+d.miss:'✓')+'</div></div>';
     }).join('') || '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Không có dữ liệu</div>';
 
@@ -190,7 +196,7 @@ async function runMatchInner() {
       data: { labels: shipSorted.map(function(d){ return d[0]+' ('+d[1]+')'; }),
               datasets: [{ data: shipSorted.map(function(d){ return d[1]; }), backgroundColor: SHOPEE_COLORS, borderWidth: 0 }] },
       options: { responsive:true, maintainAspectRatio:false, cutout:'65%',
-                 plugins:{ legend:{ position:'right', labels:{ font:{size:10}, boxWidth:10, padding:6, color:labelColor } } } }
+                 plugins:{ legend:{ position:'right', labels:{ font:{size:13}, boxWidth:10, padding:6, color:labelColor } } } }
     });
   }
   function barChart(ref, sorted, color) {
@@ -201,8 +207,8 @@ async function runMatchInner() {
       data: { labels: top5.map(function(p){ return p[0].length>20 ? p[0].substring(0,20)+'…' : p[0]; }),
               datasets: [{ data: top5.map(function(p){ return p[1]; }), backgroundColor: color, borderRadius: 4, borderWidth: 0 }] },
       options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-                 scales:{ x:{ticks:{font:{size:10},color:labelColor},grid:{display:false}},
-                          y:{ticks:{font:{size:10},color:labelColor},grid:{display:false}} } }
+                 scales:{ x:{ticks:{font:{size:13},color:labelColor},grid:{display:false}},
+                          y:{ticks:{font:{size:13},color:labelColor},grid:{display:false}} } }
     });
   }
   if (prodChart) prodChart.destroy();
@@ -226,7 +232,8 @@ async function runMatchInner() {
   renderTableA(); renderTableB();
   progress(100);
   setTimeout(function(){ _$('pb').style.display='none'; }, 400);
-  _$('results').style.display = 'block';
+  _$('empty').hidden = true;
+  _$('results').hidden = false;
   _$('results').scrollIntoView({behavior:'smooth', block:'start'});
 
   /* ---- Kho chung: xoá mã Shopee đã khớp (sau khi người dùng đồng ý) ---- */
@@ -286,7 +293,7 @@ function renderTableB() {
     return '<tr><td>'+(start+i+1)+'</td>'+
       '<td><code>'+esc(m.id)+'</code></td>'+
       '<td>'+(isOld ? '<span class="badge-old">📅 '+esc(m.date)+'</span>' : '<span class="badge-new">📅 '+esc(m.date)+'</span>')+'</td>'+
-      '<td style="font-weight:700;color:'+(isOld?'var(--red)':'var(--text-secondary)')+'">'+(days===null?'—':days+' ngày')+'</td>'+
+      '<td class="'+(isOld?'days-old':'days-new')+'">'+(days===null?'—':days+' ngày')+'</td>'+
       '<td>'+(isOld?'<span class="badge-red">⚠ Tồn lâu</span>':'<span class="badge-amber">Chưa có chứng từ</span>')+'</td></tr>';
   }).join('');
   UI.renderPager(pager, pageB, totalPages, function(p){ pageB=p; renderTableB(); });
