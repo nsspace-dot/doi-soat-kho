@@ -97,6 +97,11 @@ Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee (hoặc TikTok) 
 Xoá dòng ví dụ (quên xoá cũng không sao, dòng mã `012345678901` tự bị bỏ qua), điền các đơn sàn báo nhưng kho chưa nhận,
 rồi kéo file vào ô file của tab sàn tương ứng. Cột Mã vận đơn đã khoá dạng Text: gõ hoặc dán mã 12 số vẫn giữ nguyên.
 
+### 4. Đổi giao diện
+
+Bấm nút 🎨 ở góc phải thanh trên cùng, chọn **Mèo con**, **Vintage** hoặc **Tối giản**, và bật/tắt **Chế độ tối**.
+Lựa chọn chỉ lưu trên trình duyệt của bạn, không ảnh hưởng người khác và không đụng tới kho chung.
+
 ---
 
 ## D. Lỡ ghi nhầm thì làm gì?

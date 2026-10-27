@@ -16,6 +16,17 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 Dòng trạng thái ở đầu trang (cả 3 tab): `Tải lần cuối: dd/mm/yyyy hh:mm bởi <tên> · N mã trong kho`, kèm nhãn xanh
 "Tuần này đã có người tải kho" (lần tải cuối trong 7 ngày) hoặc nhãn vàng "Chưa tải kho tuần này".
 
+## Giao diện và chủ đề
+
+Đầu trang (cả 3 tab) có 4 thẻ số liệu kho chung: **Mã trong kho**, **Tải lần cuối**, **Tồn từ 7 ngày trở lên**, **Tuần này**.
+Tab Kho chia 3 bước: ① Nhập mã → ② Xem trước → ③ Lưu vào kho. Màu nút chính và viền thẻ đổi theo tab đang xem
+(Kho xanh dương, Shopee cam, TikTok hồng).
+
+Nút 🎨 ở góc phải thanh trên cùng mở hộp chọn chủ đề: **Mèo con** (mặc định), **Vintage**, **Tối giản**, mỗi chủ đề có
+công tắc Sáng/Tối (6 biến thể). Lựa chọn lưu trong trình duyệt (localStorage, khoá `doiSoat_chuDe_v1`), mỗi máy một lựa chọn riêng.
+Màu của từng biến thể nằm trong `css/themes.css`; `css/app.css` chỉ dùng biến. Mọi cặp chữ/nền đạt tương phản ≥ 4.5:1
+(`tests/theme.test.js` kiểm tra).
+
 ## File mẫu đơn thiếu và file xuất
 
 Một bộ cột duy nhất, đúng thứ tự:
@@ -33,8 +44,10 @@ Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee/TikTok | Loại 
 
 ```
 index.html              trang duy nhất (3 tab)
-css/app.css             giao diện (sáng/tối)
+css/themes.css          6 bộ biến màu (3 chủ đề × Sáng/Tối)
+css/app.css             giao diện, chỉ dùng biến
 js/config.js            API_URL: chỗ duy nhất cần sửa sau khi deploy
+js/theme.js             chủ đề: nạp trong <head>, áp màu trước khi vẽ; hộp chọn 🎨
 js/core/                logic thuần, không đụng DOM, có test
   common.js             hàm dùng chung: đọc ô, dò cột, dò tiêu đề, đọc file, ngày, tuần ISO, khoá cột Text
   kho-input.js          tách tin nhắn Zalo, đọc file mã kho, gộp trùng
@@ -57,7 +70,8 @@ xlsx 0.18.5 và Chart.js 4.4.1 tải từ cdnjs như bản gốc. Không có bư
 ```bash
 npm install          # chỉ để có xlsx cho test
 npm test             # bộ tách mã, gộp trùng, xoá đúng sàn, bộ cột, backend (Code.gs chạy trên Apps Script giả lập)
-npm run test:e2e     # (tuỳ chọn) chạy trang thật bằng Playwright + Chromium, máy chủ giả lập dùng chính Code.gs
+npm run test:e2e     # (tuỳ chọn) chạy trang thật bằng Playwright + Chromium, máy chủ giả lập dùng chính Code.gs;
+                     # quét tương phản mọi chữ trên trang ở cả 6 chủ đề, kiểm tra điện thoại 390px
 ```
 
 `npm run test:e2e` cần sẵn `playwright` và Chromium (`npx playwright install chromium`). Ảnh chụp màn hình lưu ở `tests/e2e/out/`.
