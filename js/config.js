@@ -4,4 +4,4 @@
    vào giữa hai dấu nháy. Để trống khi chưa deploy: trang sẽ hiện hướng
    dẫn thay vì báo lỗi. Xem HUONG-DAN.md.
    ===================================================================== */
-var API_URL = '';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzoMcXLTeuKoXaS3qyNwwO2sMoC27WP6nNZjFUBuAXx2GWTNWT3TOt5KdLeO5A_lefh/exec';
