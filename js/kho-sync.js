@@ -67,7 +67,7 @@ var KhoSync = (function () {
       var msg = 'Đã xoá ' + fmtNum(x) + ' mã đã khớp ' + SAN_LABEL[san] + ' khỏi kho chung. Kho còn ' + fmtNum(st.info.soMa) + ' mã.';
       if (x < codes.length) msg += ' (' + fmtNum(codes.length - x) + ' mã đã được người khác xoá trước đó.)';
       banner(pfx, 'done', esc(msg));
-      UI.toast('✓ ' + msg);
+      UI.toast(msg, null, 'ok');
     }, function (err) {
       pending(pfx, san, codes, 'Chưa ghi được kết quả vào kho chung: ' + err.message);
     });

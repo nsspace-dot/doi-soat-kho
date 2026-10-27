@@ -156,8 +156,8 @@ var KhoTab = (function () {
       catch (err) { UI.alert('Chưa lưu được vào kho chung', esc(err.message) + '<br><br>Danh sách mã của bạn vẫn còn trên trang, có thể bấm lưu lại.'); return; }
       Kho.apply(res);
       var k = res.ketQua || {};
-      UI.toast('✓ Đã lưu vào kho chung: thêm ' + fmtNum(k.them || 0) + ' mã mới, ' + fmtNum(k.daCo || 0) + ' mã đã có' +
-        (k.bo ? ', bỏ ' + fmtNum(k.bo) + ' mã' : '') + ' · kho có ' + fmtNum(res.info.soMa) + ' mã', 7000);
+      UI.toast('Đã lưu vào kho chung: thêm ' + fmtNum(k.them || 0) + ' mã mới, ' + fmtNum(k.daCo || 0) + ' mã đã có' +
+        (k.bo ? ', bỏ ' + fmtNum(k.bo) + ' mã' : '') + ' · kho có ' + fmtNum(res.info.soMa) + ' mã', 7000, 'ok');
       clearAll();
     } finally {
       setSaving(false);
@@ -214,7 +214,7 @@ var KhoTab = (function () {
     try {
       var res = await Api.undo(nguoi, info.phienBan);
       Kho.apply(res);
-      UI.toast('↩ Đã hoàn tác · kho còn ' + fmtNum(res.info.soMa) + ' mã');
+      UI.toast('Đã hoàn tác · kho còn ' + fmtNum(res.info.soMa) + ' mã', null, 'ok');
     } catch (err) { UI.alert('Chưa hoàn tác được', esc(err.message)); }
   }
 

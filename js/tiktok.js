@@ -43,7 +43,7 @@ function renderFileList(listId, arr) {
     return '<div class="file-item">' +
       '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
       '<span class="file-item-name">' + esc(f.name) + '</span>' +
-      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="TT.editShopName(' + i + ')">🏷️ ' + esc(shop) + '</span><span class="file-item-type">' + type + '</span>' +
+      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="TT.editShopName(' + i + ')"><span class="emo" aria-hidden="true">🏷️</span> ' + esc(shop) + '</span><span class="file-item-type">' + type + '</span>' +
       '<span class="file-item-type">' + fmtSize(f.size) + '</span>' +
       '<button class="file-item-del" onclick="TT.removeFile(' + i + ',event)">' +
         '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
@@ -176,10 +176,10 @@ async function runMatchInner() {
   }
   if (missB.length > 0) {
     var oldCount = missB.filter(function(m){ return (daysSince(m.date)||0) >= 7; }).length;
-    warns.push({ok:false, text:'Có '+fmtNum(missB.length)+' mã kho chưa khớp chứng từ TikTok' + (oldCount > 0 ? ' — trong đó '+oldCount+' mã tồn trên 7 ngày ⚠' : '')});
+    warns.push({ok:false, text:'Có '+fmtNum(missB.length)+' mã kho chưa khớp chứng từ TikTok' + (oldCount > 0 ? ' — trong đó '+oldCount+' mã tồn trên 7 ngày' : '')});
   }
   _$('warningArea').innerHTML = warns.map(function(w){
-    return '<span class="chip '+(w.ok?'chip-ok':'chip-warn')+'">'+(w.ok?'✓ ':'⚠ ')+esc(w.text)+'</span>';
+    return '<span class="chip '+(w.ok?'chip-ok':'chip-warn')+'">'+'<span class="emo" aria-hidden="true">'+(w.ok?'✓':'⚠')+'</span> '+esc(w.text)+'</span>';
   }).join('');
 
   // Biểu đồ Shop
@@ -200,8 +200,7 @@ async function runMatchInner() {
       (d.miss?'✗ '+d.miss:'✓')+'</div></div>';
   }).join('') || '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Không có dữ liệu</div>';
 
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const labelColor = isDark ? '#a1a1aa' : '#475569';
+  const labelColor = Theme.chartColor();
 
   if (shipChart) shipChart.destroy();
   shipChart = null;
@@ -266,7 +265,7 @@ function renderTableA() {
   const btnExA = _$('btnExportA');
   btnExA.style.display = resultMissA.length > 0 ? 'inline-flex' : 'none';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">✅ Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="emo" aria-hidden="true">✅</span> Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
     pager.innerHTML = ''; return;
   }
   const totalPages = Math.ceil(filtered.length/pageSize);
@@ -275,7 +274,7 @@ function renderTableA() {
   tbody.innerHTML = pageData.map(function(r,i){
     return '<tr><td>'+(startIdx+i+1)+'</td>'+
       '<td><span class="shop-tag">'+esc(r.shop)+'</span></td>'+
-      '<td><span class="type-tag">'+(r.type==='giao'?'Giao KTC':r.type==='exported'?'📂 Xuất lại':'Trả hàng')+'</span></td>'+
+      '<td><span class="type-tag">'+(r.type==='giao'?'Giao KTC':r.type==='exported'?'<span class="emo" aria-hidden="true">📂</span> Xuất lại':'Trả hàng')+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td>'+esc(r.kho||'—')+'</td></tr>';
   }).join('');
@@ -288,7 +287,7 @@ function renderTableB() {
   const filtered = resultMissB.filter(m => m.id.toLowerCase().includes(searchStrB));
   _$('cntB').textContent = '('+filtered.length+')';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">✅ Tất cả mã đối soát đều có chứng từ TikTok</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="emo" aria-hidden="true">✅</span> Tất cả mã đối soát đều có chứng từ TikTok</td></tr>';
     pager.innerHTML = ''; return;
   }
   const totalPages = Math.ceil(filtered.length/pageSize);
@@ -301,9 +300,9 @@ function renderTableB() {
     return '<tr>'+
       '<td>'+(startIdx+i+1)+'</td>'+
       '<td><code>'+esc(m.id)+'</code></td>'+
-      '<td>'+(isOld ? '<span class="badge-old">📅 '+esc(m.date)+'</span>' : '<span class="badge-new">📅 '+esc(m.date)+'</span>')+'</td>'+
+      '<td>'+(isOld ? '<span class="badge-old"><span class="emo" aria-hidden="true">📅</span> '+esc(m.date)+'</span>' : '<span class="badge-new"><span class="emo" aria-hidden="true">📅</span> '+esc(m.date)+'</span>')+'</td>'+
       '<td class="'+(isOld?'days-old':'days-new')+'">'+daysLabel+'</td>'+
-      '<td>'+(isOld?'<span class="badge-red">⚠ Tồn lâu</span>':'<span class="badge-amber">Chưa có chứng từ</span>')+'</td>'+
+      '<td>'+(isOld?'<span class="badge-red"><span class="emo" aria-hidden="true">⚠</span> Tồn lâu</span>':'<span class="badge-amber">Chưa có chứng từ</span>')+'</td>'+
     '</tr>';
   }).join('');
   UI.renderPager(pager, pageB, totalPages, function(p){pageB=p; renderTableB();});
@@ -353,7 +352,7 @@ function switchTab(paneId, btn) {
 }
 
 function applyChartTheme() {
-  var c = document.documentElement.getAttribute('data-theme') === 'dark' ? '#a1a1aa' : '#475569';
+  var c = Theme.chartColor();
   if (shipChart) { shipChart.options.plugins.legend.labels.color = c; shipChart.update(); }
   if (prodChart) { prodChart.options.scales.x.ticks.color = c; prodChart.options.scales.y.ticks.color = c; prodChart.update(); }
 }

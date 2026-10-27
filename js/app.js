@@ -1,5 +1,5 @@
 /* =====================================================================
-   App — 3 tab, theme Sáng/Tối dùng chung, 4 thẻ số liệu kho chung
+   App — 3 tab, hộp chọn chủ đề (js/theme.js), 4 thẻ số liệu kho chung
    luôn hiện ở đầu trang.
    ===================================================================== */
 var App = (function () {
@@ -23,22 +23,6 @@ var App = (function () {
     UI.memSet('platform', p);
   }
   function currentTab() { return document.documentElement.getAttribute('data-tab') || 'kho'; }
-
-  /* ---------- giao diện Sáng/Tối ---------- */
-  function toggleTheme() {
-    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    UI.memSet('theme', next);
-    paintThemeIcon(next);
-    SP.applyChartTheme(); TT.applyChartTheme();
-  }
-  function paintThemeIcon(mode) {
-    var icon = $('theme-icon');
-    if (!icon) return;
-    icon.innerHTML = mode === 'dark'
-      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
-      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-  }
 
   /* ---------- 4 thẻ số liệu kho chung ---------- */
   function setStat(id, value, sub) {
@@ -87,9 +71,9 @@ var App = (function () {
   }
 
   function init() {
-    var savedTheme = UI.memGet('theme') || 'light';
-    if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-    paintThemeIcon(savedTheme);
+    // Chủ đề đã được js/theme.js áp từ trong <head>; ở đây chỉ gắn hộp chọn.
+    Theme.initPicker($('themeBtn'));
+    Theme.onChange(function () { SP.applyChartTheme(); TT.applyChartTheme(); });
     switchTab(UI.memGet('platform') || 'kho');
     Kho.onChange(renderStatus);
     renderStatus();
@@ -97,7 +81,7 @@ var App = (function () {
     if (Api.configured()) Kho.refresh().catch(function () {});
   }
 
-  return { init: init, switchTab: switchTab, currentTab: currentTab, toggleTheme: toggleTheme, refreshStatus: refreshStatus };
+  return { init: init, switchTab: switchTab, currentTab: currentTab, refreshStatus: refreshStatus };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

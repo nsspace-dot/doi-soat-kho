@@ -6,9 +6,13 @@ var UI = (function () {
 
   /* ---------- thông báo nổi ---------- */
   var toastTimer = null;
-  function toast(msg, ms) {
+  // kind 'ok': câu báo thành công, trang trí theo chủ đề (con vật chỉ ở "Mèo con").
+  function toast(msg, ms, kind) {
     var el = document.getElementById('toast');
     if (!el) return;
+    if (kind === 'ok' && typeof Theme !== 'undefined') {
+      msg = Theme.successText(msg, document.documentElement.getAttribute('data-tab'));
+    }
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);

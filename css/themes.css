@@ -1,58 +1,204 @@
 /* =====================================================================
-   Bảng màu (biến CSS). css/app.css chỉ dùng các biến này, không có mã
-   màu riêng. Bản này có Sáng (mặc định) và Tối.
+   CHỦ ĐỀ (theme). Mỗi biến thể là một bộ biến CSS áp bằng
+   <html data-theme="…">. css/app.css chỉ dùng các biến này.
+     meo-light (mặc định) · meo-dark · vintage-light · vintage-dark
+     toigian-light · toigian-dark
+   Mọi cặp chữ/nền đạt tương phản ≥ 4.5:1 — tests/theme.test.js kiểm tra.
+   Biến:
+     --bg --surface --surface-2 --input-bg --border --border-strong
+     --text --text-2 --text-muted --topbar-bg --topbar-text
+     --kho/--sp/--tt (màu nền tab & nút chính), --on-* (chữ trên nền đó),
+     --ink-* (chữ màu sàn trên nền thẻ), --deep-* (bóng đáy nút)
+     --ok/--err/--warn (mảng màu), --on-ok/--on-err
+     --{ok,warn,err,info}-{bg,ink,line} (nhãn, hộp thông báo)
+     --toast-* --chart-* --focus --overlay --shadow* --radius* --bw ...
    ===================================================================== */
-:root {
-  --bg: #F8FAFC; --surface: #FFFFFF; --surface-2: #F1F5F9; --input-bg: #FFFFFF;
-  --border: #E2E8F0; --border-strong: #94A3B8;
-  --text: #0F172A; --text-2: #334155; --text-muted: #5B6676;
-  --topbar-bg: #0F172A; --topbar-text: #F8FAFC;
 
-  --kho: #2563EB; --on-kho: #FFFFFF; --ink-kho: #1D4ED8; --deep-kho: #1E40AF;
+/* ---------------- Mèo con · Sáng (mặc định) ---------------- */
+:root, [data-theme="meo-light"] {
+  --bg: #FFF6EE; --surface: #FFFFFF; --surface-2: #FFF1E6; --input-bg: #FFFFFF;
+  --border: #F6D9C4; --border-strong: #D9A98A;
+  --text: #4A3B35; --text-2: #6E584C; --text-muted: #7A6357;
+  --topbar-bg: #FFE3D0; --topbar-text: #4A3B35;
+
+  --kho: #5B9BEA; --on-kho: #1E1410; --ink-kho: #2F68B0; --deep-kho: #497CBB;
+  --sp:  #FF7A45; --on-sp:  #1E1410; --ink-sp:  #B5481A; --deep-sp:  #CC6237;
+  --tt:  #FF4F8B; --on-tt:  #1E1410; --ink-tt:  #C02A62; --deep-tt:  #CC3F6F;
+
+  --ok: #4CC38A; --on-ok: #10301F; --err: #EF5B6B; --on-err: #2A0A0F; --warn: #F5A524;
+  --ok-bg: #E4F7EC; --ok-ink: #1D7046; --ok-line: #9EDFBD;
+  --warn-bg: #FFF1D6; --warn-ink: #855300; --warn-line: #F5C873;
+  --err-bg: #FFE6E9; --err-ink: #B02538; --err-line: #F7A9B2;
+  --info-bg: #E8F1FD; --info-ink: #2A5E9E; --info-line: #A9CBF3;
+
+  --toast-bg: #4A3B35; --toast-text: #FFF6EE;
+  --chart-text: #6E584C; --chart-grid: #F6D9C4;
+  --focus: #2F68B0; --overlay: rgba(74, 59, 53, .45);
+
+  --shadow: 0 3px 0 rgba(217, 169, 138, .35);
+  --shadow-lg: 0 10px 0 rgba(74, 59, 53, .12), 0 16px 32px rgba(74, 59, 53, .16);
+  --btn-shadow-y: 4px;
+  --radius: 22px; --radius-sm: 14px; --radius-pill: 999px;
+  --bw: 2px; --card-bw: 2px; --bstyle: solid;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: var(--font-ui); --font-head: var(--font-ui);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: none; --title-spacing: 0;
+}
+
+/* ---------------- Mèo con · Tối ---------------- */
+[data-theme="meo-dark"] {
+  --bg: #2B211F; --surface: #3A2D2A; --surface-2: #33272A; --input-bg: #2B211F;
+  --border: #5A4640; --border-strong: #8A7064;
+  --text: #FFF1E8; --text-2: #EBD5C8; --text-muted: #D2B9AC;
+  --topbar-bg: #3A2D2A; --topbar-text: #FFF1E8;
+
+  --kho: #7DB2F5; --on-kho: #1E1614; --ink-kho: #9CC5F8; --deep-kho: #4F7EBA;
+  --sp:  #FF9468; --on-sp:  #1E1614; --ink-sp:  #FFAA86; --deep-sp:  #C26A45;
+  --tt:  #FF6FA0; --on-tt:  #1E1614; --ink-tt:  #FF94B8; --deep-tt:  #C04B76;
+
+  --ok: #5FD39B; --on-ok: #0F2A1C; --err: #FF7A88; --on-err: #2A0A0F; --warn: #F7B748;
+  --ok-bg: #213A2D; --ok-ink: #8BE3B7; --ok-line: #3C7556;
+  --warn-bg: #43341A; --warn-ink: #FFD27D; --warn-line: #8A6A2A;
+  --err-bg: #4A2329; --err-ink: #FFA3AD; --err-line: #8E4550;
+  --info-bg: #23324A; --info-ink: #A9CDF8; --info-line: #4A6A93;
+
+  --toast-bg: #FFF1E8; --toast-text: #2B211F;
+  --chart-text: #EBD5C8; --chart-grid: #5A4640;
+  --focus: #9CC5F8; --overlay: rgba(0, 0, 0, .6);
+  --shadow: 0 3px 0 rgba(0, 0, 0, .3);
+  --shadow-lg: 0 10px 0 rgba(0, 0, 0, .25), 0 16px 32px rgba(0, 0, 0, .4);
+  --btn-shadow-y: 4px;
+  --radius: 22px; --radius-sm: 14px; --radius-pill: 999px;
+  --bw: 2px; --card-bw: 2px; --bstyle: solid;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: var(--font-ui); --font-head: var(--font-ui);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: none; --title-spacing: 0;
+}
+
+/* ---------------- Vintage · Sáng ---------------- */
+[data-theme="vintage-light"] {
+  --bg: #F3EAD7; --surface: #FBF5E6; --surface-2: #F1E6CE; --input-bg: #FFFCF3;
+  --border: #CDBB98; --border-strong: #9C8763;
+  --text: #4B3621; --text-2: #5E4730; --text-muted: #6E5A42;
+  --topbar-bg: #4B3621; --topbar-text: #FBF5E6;
+
+  --kho: #4F6D8F; --on-kho: #FBF5E6; --ink-kho: #415C7B; --deep-kho: #3F5772;
+  --sp:  #A9521F; --on-sp:  #FBF5E6; --ink-sp:  #9E4A1A; --deep-sp:  #874118;
+  --tt:  #A84868; --on-tt:  #FBF5E6; --ink-tt:  #A04263; --deep-tt:  #863953;
+
+  --ok: #5F6F4B; --on-ok: #FBF5E6; --err: #A8432B; --on-err: #FBF5E6; --warn: #B7862C;
+  --ok-bg: #E6E9D6; --ok-ink: #4A5838; --ok-line: #A9B48D;
+  --warn-bg: #F4E2B8; --warn-ink: #6F4E10; --warn-line: #D2B06A;
+  --err-bg: #F3DDD3; --err-ink: #8F3622; --err-line: #D59C88;
+  --info-bg: #E2E6E6; --info-ink: #3E5873; --info-line: #A7B5C2;
+
+  --toast-bg: #4B3621; --toast-text: #FBF5E6;
+  --chart-text: #5E4730; --chart-grid: #CDBB98;
+  --focus: #5F6F4B; --overlay: rgba(75, 54, 33, .5);
+  --shadow: 0 1px 0 rgba(75, 54, 33, .12);
+  --shadow-lg: 0 8px 24px rgba(75, 54, 33, .25);
+  --btn-shadow-y: 0px;
+  --radius: 6px; --radius-sm: 4px; --radius-pill: 6px;
+  --bw: 1px; --card-bw: 3px; --bstyle: double;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: 'Times New Roman', 'Noto Serif', 'Liberation Serif', 'DejaVu Serif', serif;
+  --font-head: var(--font-num);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: uppercase; --title-spacing: .08em;
+}
+
+/* ---------------- Vintage · Tối ---------------- */
+[data-theme="vintage-dark"] {
+  --bg: #241C14; --surface: #30261C; --surface-2: #3A2E22; --input-bg: #241C14;
+  --border: #5C4A37; --border-strong: #8C765A;
+  --text: #F3EAD7; --text-2: #E2D5BC; --text-muted: #CDBE9F;
+  --topbar-bg: #1A140E; --topbar-text: #F3EAD7;
+
+  --kho: #8FB0D6; --on-kho: #1E1810; --ink-kho: #A9C3E2; --deep-kho: #5F7EA3;
+  --sp:  #E39361; --on-sp:  #1E1810; --ink-sp:  #EBA87D; --deep-sp:  #A9643A;
+  --tt:  #E28FAE; --on-tt:  #1E1810; --ink-tt:  #EBA9C1; --deep-tt:  #A9617C;
+
+  --ok: #A9BC8A; --on-ok: #1E1810; --err: #E58A72; --on-err: #1E1810; --warn: #E0B45A;
+  --ok-bg: #2F3826; --ok-ink: #C3D3A6; --ok-line: #5F6F4B;
+  --warn-bg: #43341A; --warn-ink: #EDCB86; --warn-line: #8A6A2A;
+  --err-bg: #47271E; --err-ink: #F0AC98; --err-line: #8F4A37;
+  --info-bg: #263243; --info-ink: #B3C8E0; --info-line: #4F6D8F;
+
+  --toast-bg: #F3EAD7; --toast-text: #241C14;
+  --chart-text: #E2D5BC; --chart-grid: #5C4A37;
+  --focus: #C3D3A6; --overlay: rgba(0, 0, 0, .6);
+  --shadow: 0 1px 0 rgba(0, 0, 0, .3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, .45);
+  --btn-shadow-y: 0px;
+  --radius: 6px; --radius-sm: 4px; --radius-pill: 6px;
+  --bw: 1px; --card-bw: 3px; --bstyle: double;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: 'Times New Roman', 'Noto Serif', 'Liberation Serif', 'DejaVu Serif', serif;
+  --font-head: var(--font-num);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: uppercase; --title-spacing: .08em;
+}
+
+/* ---------------- Tối giản · Sáng ---------------- */
+[data-theme="toigian-light"] {
+  --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F9FAFB; --input-bg: #FFFFFF;
+  --border: #E5E7EB; --border-strong: #9CA3AF;
+  --text: #111827; --text-2: #374151; --text-muted: #4B5563;
+  --topbar-bg: #FFFFFF; --topbar-text: #111827;
+
+  --kho: #2563EB; --on-kho: #FFFFFF; --ink-kho: #1D4ED8; --deep-kho: #1D4ED8;
   --sp:  #C2410C; --on-sp:  #FFFFFF; --ink-sp:  #C2410C; --deep-sp:  #9A3412;
   --tt:  #BE185D; --on-tt:  #FFFFFF; --ink-tt:  #BE185D; --deep-tt:  #9D174D;
 
   --ok: #15803D; --on-ok: #FFFFFF; --err: #DC2626; --on-err: #FFFFFF; --warn: #D97706;
-  --ok-bg: #ECFDF5; --ok-ink: #166534; --ok-line: #86EFAC;
-  --warn-bg: #FEF3C7; --warn-ink: #92400E; --warn-line: #FCD34D;
-  --err-bg: #FEE2E2; --err-ink: #B91C1C; --err-line: #FCA5A5;
-  --info-bg: #EFF6FF; --info-ink: #1D4ED8; --info-line: #BFDBFE;
+  --ok-bg: #F0FDF4; --ok-ink: #166534; --ok-line: #BBF7D0;
+  --warn-bg: #FFFBEB; --warn-ink: #92400E; --warn-line: #FDE68A;
+  --err-bg: #FEF2F2; --err-ink: #B91C1C; --err-line: #FECACA;
+  --info-bg: #F8FAFC; --info-ink: #334155; --info-line: #E2E8F0;
 
-  --toast-bg: #0F172A; --toast-text: #F8FAFC;
-  --chart-text: #334155; --chart-grid: #E2E8F0;
-  --focus: #2563EB; --overlay: rgba(15, 23, 42, .55);
-
-  --shadow: 0 1px 3px rgba(15, 23, 42, .08);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, .18);
+  --toast-bg: #111827; --toast-text: #FFFFFF;
+  --chart-text: #374151; --chart-grid: #E5E7EB;
+  --focus: #334155; --overlay: rgba(17, 24, 39, .45);
+  --shadow: none;
+  --shadow-lg: 0 8px 24px rgba(17, 24, 39, .12);
   --btn-shadow-y: 0px;
-  --radius: 12px; --radius-sm: 8px; --radius-pill: 999px;
+  --radius: 8px; --radius-sm: 6px; --radius-pill: 999px;
   --bw: 1px; --card-bw: 1px; --bstyle: solid;
   --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  --font-num: var(--font-ui);
-  --font-head: var(--font-ui);
+  --font-num: var(--font-ui); --font-head: var(--font-ui);
   --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-  --title-transform: uppercase; --title-spacing: .06em;
+  --title-transform: none; --title-spacing: 0;
 }
 
-[data-theme="dark"] {
-  --bg: #0B1220; --surface: #111A2E; --surface-2: #1A2540; --input-bg: #0B1220;
-  --border: #26324D; --border-strong: #52617F;
+/* ---------------- Tối giản · Tối ---------------- */
+[data-theme="toigian-dark"] {
+  --bg: #0F172A; --surface: #111C33; --surface-2: #1A2540; --input-bg: #0F172A;
+  --border: #2A3550; --border-strong: #5B6B88;
   --text: #F1F5F9; --text-2: #CBD5E1; --text-muted: #A3AEC2;
-  --topbar-bg: #020617; --topbar-text: #F1F5F9;
+  --topbar-bg: #0F172A; --topbar-text: #F1F5F9;
 
-  --kho: #60A5FA; --on-kho: #0B1220; --ink-kho: #93C5FD; --deep-kho: #2563EB;
-  --sp:  #FB923C; --on-sp:  #1C0A02; --ink-sp:  #FDBA74; --deep-sp:  #C2410C;
-  --tt:  #F472B6; --on-tt:  #1F0614; --ink-tt:  #F9A8D4; --deep-tt:  #BE185D;
+  --kho: #60A5FA; --on-kho: #0F172A; --ink-kho: #93C5FD; --deep-kho: #2563EB;
+  --sp:  #FB923C; --on-sp:  #0F172A; --ink-sp:  #FDBA74; --deep-sp:  #C2410C;
+  --tt:  #F472B6; --on-tt:  #0F172A; --ink-tt:  #F9A8D4; --deep-tt:  #BE185D;
 
-  --ok: #4ADE80; --on-ok: #052E16; --err: #F87171; --on-err: #2A0707; --warn: #FBBF24;
-  --ok-bg: #0F2E22; --ok-ink: #86EFAC; --ok-line: #166534;
-  --warn-bg: #33250A; --warn-ink: #FCD34D; --warn-line: #92400E;
-  --err-bg: #3A1212; --err-ink: #FCA5A5; --err-line: #991B1B;
-  --info-bg: #13264A; --info-ink: #93C5FD; --info-line: #1E40AF;
+  --ok: #4ADE80; --on-ok: #0F172A; --err: #F87171; --on-err: #0F172A; --warn: #FBBF24;
+  --ok-bg: #12291F; --ok-ink: #86EFAC; --ok-line: #1F5135;
+  --warn-bg: #2E2410; --warn-ink: #FCD34D; --warn-line: #6B4F12;
+  --err-bg: #331417; --err-ink: #FCA5A5; --err-line: #7F1D1D;
+  --info-bg: #172036; --info-ink: #CBD5E1; --info-line: #334155;
 
   --toast-bg: #F1F5F9; --toast-text: #0F172A;
-  --chart-text: #CBD5E1; --chart-grid: #26324D;
-  --focus: #93C5FD; --overlay: rgba(0, 0, 0, .65);
-  --shadow: 0 1px 3px rgba(0, 0, 0, .4);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+  --chart-text: #CBD5E1; --chart-grid: #2A3550;
+  --focus: #CBD5E1; --overlay: rgba(0, 0, 0, .65);
+  --shadow: none;
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, .5);
+  --btn-shadow-y: 0px;
+  --radius: 8px; --radius-sm: 6px; --radius-pill: 999px;
+  --bw: 1px; --card-bw: 1px; --bstyle: solid;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-num: var(--font-ui); --font-head: var(--font-ui);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --title-transform: none; --title-spacing: 0;
 }
