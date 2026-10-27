@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trích mã Kho → Excel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #ff0050;
+  --accent-bg: #fff0f5;
+  --accent-border: #ffb3cd;
+  --green: #10b981;
+  --green-bg: #ecfdf5;
+  --green-border: #a7f3d0;
+  --green-dark: #047857;
+  --amber: #f59e0b;
+  --amber-bg: #fef3c7;
+  --amber-border: #fcd34d;
+  --amber-dark: #b45309;
+  --red: #ef4444;
+  --red-bg: #fee2e2;
+  --red-dark: #b91c1c;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-hover: #27272a;
+    --border: #27272a;
+    --text: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --accent-bg: #2a0f18;
+    --accent-border: #5c1830;
+    --green-bg: #052e22;
+    --green-border: #0d5c3f;
+    --amber-bg: #3d2c05;
+    --amber-border: #7a5a09;
+    --red-bg: #3a0d0d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-hover: #27272a;
+  --border: #27272a;
+  --text: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent-bg: #2a0f18;
+  --accent-border: #5c1830;
+  --green-bg: #052e22;
+  --green-border: #0d5c3f;
+  --amber-bg: #3d2c05;
+  --amber-border: #7a5a09;
+  --red-bg: #3a0d0d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+header { margin-bottom: 22px; }
+header h1 {
+  font-size: 22px;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+header h1 .badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+header p { color: var(--text-secondary); font-size: 14px; margin: 0; line-height: 1.6; max-width: 70ch; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.card h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+textarea::placeholder { color: var(--text-muted); }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+button {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+button:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.07); }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--surface-hover); }
+.btn-export { background: var(--green); color: #fff; }
+.btn-export:hover:not(:disabled) { filter: brightness(1.07); }
+.hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.stat .num { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.stat .label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.stat.accent .num { color: var(--accent); }
+.stat.green .num { color: var(--green-dark); }
+.stat.amber .num { color: var(--amber-dark); }
+
+details.skipped {
+  border: 1px solid var(--amber-border);
+  background: var(--amber-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+details.skipped summary { cursor: pointer; font-weight: 600; color: var(--amber-dark); }
+details.skipped pre {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.search-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  width: 220px;
+}
+.search-box:focus { outline: none; border-color: var(--accent); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+thead th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: none;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface-hover); }
+td.code { font-family: var(--mono); font-weight: 600; }
+td.num { color: var(--text-muted); width: 44px; }
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+.del-btn {
+  background: transparent;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  line-height: 1;
+  border-radius: 6px;
+}
+.del-btn:hover { background: var(--red-bg); }
+
+.pagination { display: flex; gap: 6px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.pagination button {
+  padding: 6px 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.pagination button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 11px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: all .25s ease;
+  z-index: 50;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Trích mã Kho → Excel <span class="badge">Bước đầu vào Đối soát Shopee/TikTok</span></h1>
+    <p>Dán nguyên đoạn tin nhắn bạn kho gửi qua Zalo (dạng <code>[QR]: mã</code>, <code>[C128]: mã</code>, hoặc nguyên file CSV dán trực tiếp) — công cụ tự tách mã, gộp trùng, và xuất file Excel với cột mã <b>khoá định dạng Text</b>, để dù ai mở lại bằng Excel cũng không bao giờ bị lỗi hiển thị dạng <code>8.6233E+11</code>.</p>
+  </header>
+
+  <div class="card">
+    <h2>1. Dán nội dung tin nhắn</h2>
+    <textarea id="input" placeholder="Dán toàn bộ đoạn chat ở đây, có thể gồm nhiều tin nhắn của nhiều người, nhiều ngày, xen kẽ định dạng [QR]/[C128] và định dạng CSV..."></textarea>
+    <div class="row">
+      <button class="btn-primary" id="btnParse">Xử lý &amp; xem trước</button>
+      <button class="btn-secondary" id="btnClear">Xoá hết</button>
+    </div>
+    <div class="hint">Hỗ trợ: dòng <code>[Ký hiệu]: mã</code> hoặc <code>[Ký hiệu] mã</code>, khối CSV dán nguyên (<code>"QR","mã","timestamp","ngày"</code>), và dòng tiêu đề Zalo <code>[dd/mm/yyyy hh:mm:ss] Tên: ...</code> để tự lấy ngày quét + người gửi. Mã trùng nhau sẽ tự gộp, chỉ giữ lần xuất hiện đầu tiên.</div>
+  </div>
+
+  <div id="resultsArea" style="display:none">
+    <div class="stats">
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Dòng mã nhận diện được</div></div>
+      <div class="stat green"><div class="num" id="statUnique">0</div><div class="label">Mã hợp lệ, duy nhất</div></div>
+      <div class="stat amber"><div class="num" id="statDup">0</div><div class="label">Mã trùng đã gộp</div></div>
+      <div class="stat accent"><div class="num" id="statSkipped">0</div><div class="label">Dòng không nhận diện được</div></div>
+    </div>
+
+    <details class="skipped" id="skippedBox" style="display:none">
+      <summary id="skippedSummary">Xem các dòng chưa nhận diện được</summary>
+      <pre id="skippedList"></pre>
+    </details>
+
+    <div class="card">
+      <div class="table-header">
+        <h2 style="margin:0">2. Xem trước &amp; loại bỏ mã sai nếu cần</h2>
+        <input type="text" class="search-box" id="search" placeholder="Tìm theo mã...">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:44px">STT</th>
+              <th>Mã vận đơn</th>
+              <th style="width:90px">Ký hiệu</th>
+              <th style="width:110px">Ngày quét</th>
+              <th style="width:120px">Người gửi</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pager"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn-export" id="btnExport">⬇ Tải file Excel (.xlsx)</button>
+        <span class="hint" style="margin:0" id="exportHint"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const HEADER_RE = /^\[(\d{1,2}\/\d{1,2}\/\d{2,4})\s+\d{1,2}:\d{2}:\d{2}\]\s*([^:]+):/;
+  const CSV_RE = /^"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"$/;
+  const BRACKET_RE = /^\[([A-Za-z0-9 \-ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ]+)\]:?\s*(\S+)$/;
+
+  let rows = [];       // {code, symb, date, sender}
+  let skippedLines = [];
+  let page = 1;
+  const pageSize = 12;
+  let search = '';
+
+  function sanitize(v) {
+    return String(v).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  function normalizeDate(d) {
+    const parts = d.split('/');
+    if (parts.length !== 3) return d;
+    let [dd, mm, yy] = parts;
+    if (yy.length === 2) yy = '20' + yy;
+    const ddN = parseInt(dd, 10), mmN = parseInt(mm, 10), yyN = parseInt(yy, 10);
+    if (!ddN || !mmN || !yyN) return d;
+    return ddN + '/' + mmN + '/' + yyN;
+  }
+
+  function parseLog(text) {
+    const lines = text.split(/\r?\n/);
+    let currentDate = '', currentSender = '';
+    const entries = [];
+    const skipped = [];
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (line === '""') continue;
+
+      let m = line.match(HEADER_RE);
+      if (m) {
+        currentDate = normalizeDate(m[1]);
+        currentSender = m[2].trim();
+        continue;
+      }
+
+      m = line.match(CSV_RE);
+      if (m) {
+        const symb = m[1].trim(), code = m[2].trim(), dateStr = m[4].trim();
+        if (symb.toLowerCase() === 'symbology') continue;
+        if (!code) continue;
+        const dPart = (dateStr.split(',')[0] || '').trim();
+        entries.push({
+          code: sanitize(code),
+          symb: symb || '—',
+          date: dPart ? normalizeDate(dPart) : currentDate,
+          sender: currentSender || '—'
+        });
+        continue;
+      }
+
+      m = line.match(BRACKET_RE);
+      if (m) {
+        const symb = m[1].trim(), code = m[2].trim();
+        const cleanCode = sanitize(code);
+        if (cleanCode.length < 3) { skipped.push(line); continue; }
+        entries.push({
+          code: cleanCode,
+          symb: symb || '—',
+          date: currentDate,
+          sender: currentSender || '—'
+        });
+        continue;
+      }
+
+      skipped.push(line);
+    }
+    return { entries, skipped };
+  }
+
+  function process() {
+    const text = document.getElementById('input').value;
+    if (!text.trim()) { toast('Chưa có nội dung để xử lý'); return; }
+    const { entries, skipped } = parseLog(text);
+
+    const seen = new Map();
+    let dupCount = 0;
+    for (const e of entries) {
+      if (seen.has(e.code)) { dupCount++; continue; }
+      seen.set(e.code, e);
+    }
+    rows = [...seen.values()];
+    skippedLines = skipped;
+    page = 1;
+    search = '';
+    document.getElementById('search').value = '';
+
+    document.getElementById('resultsArea').style.display = 'block';
+    document.getElementById('statTotal').textContent = entries.length.toLocaleString('vi-VN');
+    document.getElementById('statUnique').textContent = rows.length.toLocaleString('vi-VN');
+    document.getElementById('statDup').textContent = dupCount.toLocaleString('vi-VN');
+    document.getElementById('statSkipped').textContent = skipped.length.toLocaleString('vi-VN');
+
+    const skippedBox = document.getElementById('skippedBox');
+    if (skipped.length) {
+      skippedBox.style.display = 'block';
+      document.getElementById('skippedSummary').textContent = 'Xem ' + skipped.length + ' dòng chưa nhận diện được (không tính vào kết quả)';
+      document.getElementById('skippedList').textContent = skipped.join('\n');
+    } else {
+      skippedBox.style.display = 'none';
+    }
+
+    document.getElementById('exportHint').textContent = rows.length
+      ? 'File sẽ có ' + rows.length + ' mã, cột "Mã vận đơn" được khoá định dạng Text.'
+      : '';
+
+    renderTable();
+    document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function filteredRows() {
+    if (!search) return rows;
+    const s = search.toUpperCase();
+    return rows.filter(r => r.code.includes(s));
+  }
+
+  function renderTable() {
+    const data = filteredRows();
+    const tbody = document.getElementById('tbody');
+    const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+    if (page > totalPages) page = totalPages;
+    const start = (page - 1) * pageSize;
+    const pageData = data.slice(start, start + pageSize);
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Không có mã nào khớp tìm kiếm.</div></td></tr>';
+    } else {
+      tbody.innerHTML = pageData.map((r, i) => {
+        const realIdx = rows.indexOf(r);
+        return '<tr>' +
+          '<td class="num">' + (start + i + 1) + '</td>' +
+          '<td class="code">' + escapeHtml(r.code) + '</td>' +
+          '<td><span class="tag">' + escapeHtml(r.symb) + '</span></td>' +
+          '<td>' + escapeHtml(r.date || '—') + '</td>' +
+          '<td>' + escapeHtml(r.sender || '—') + '</td>' +
+          '<td><button class="del-btn" data-idx="' + realIdx + '" title="Xoá mã này">✕</button></td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    // pager
+    const pager = document.getElementById('pager');
+    if (totalPages <= 1) { pager.innerHTML = ''; }
+    else {
+      let html = '';
+      for (let p = 1; p <= totalPages; p++) {
+        html += '<button data-page="' + p + '" class="' + (p === page ? 'active' : '') + '">' + p + '</button>';
+      }
+      pager.innerHTML = html;
+    }
+
+    document.getElementById('statUnique').textContent = rows.length.toLocaleString('vi-VN');
+    document.getElementById('exportHint').textContent = rows.length
+      ? 'File sẽ có ' + rows.length + ' mã, cột "Mã vận đơn" được khoá định dạng Text.'
+      : '';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function exportExcel() {
+    if (!rows.length) { toast('Chưa có mã nào để xuất'); return; }
+    const header = ['STT', 'Mã vận đơn', 'Ký hiệu', 'Ngày đối soát', 'Người gửi'];
+    const aoa = [header];
+    rows.forEach((r, i) => aoa.push([i + 1, r.code, r.symb, r.date || '', r.sender || '']));
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    // Khoá cột "Mã vận đơn" (cột B) là kiểu Text để không bao giờ bị Excel
+    // tự chuyển sang dạng khoa học (8.62E+11) khi mở/lưu lại về sau.
+    for (let r = 1; r <= rows.length; r++) {
+      const addr = XLSX.utils.encode_cell({ r: r, c: 1 });
+      if (ws[addr]) {
+        ws[addr].t = 's';
+        ws[addr].z = '@';
+        ws[addr].v = String(ws[addr].v);
+      }
+    }
+    ws['!cols'] = [{ wch: 6 }, { wch: 24 }, { wch: 10 }, { wch: 14 }, { wch: 16 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kho');
+
+    const today = new Date();
+    const dstr = String(today.getDate()).padStart(2,'0') + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + today.getFullYear();
+    XLSX.writeFile(wb, 'Kho_chua_co_chung_tu_' + dstr + '.xlsx');
+    toast('Đã tải file Excel — ' + rows.length + ' mã');
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  document.getElementById('btnParse').addEventListener('click', process);
+  document.getElementById('btnClear').addEventListener('click', () => {
+    document.getElementById('input').value = '';
+    document.getElementById('resultsArea').style.display = 'none';
+    rows = []; skippedLines = [];
+  });
+  document.getElementById('btnExport').addEventListener('click', exportExcel);
+  document.getElementById('search').addEventListener('input', (e) => {
+    search = e.target.value.trim();
+    page = 1;
+    renderTable();
+  });
+  document.getElementById('tbody').addEventListener('click', (e) => {
+    const btn = e.target.closest('.del-btn');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    rows.splice(idx, 1);
+    document.getElementById('statUnique').textContent = rows.length.toLocaleString('vi-VN');
+    renderTable();
+  });
+  document.getElementById('pager').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-page]');
+    if (!btn) return;
+    page = parseInt(btn.dataset.page, 10);
+    renderTable();
+  });
+})();
+</script>
+</body>
+</html>
