@@ -1,0 +1,14 @@
+{
+  "name": "doi-soat-kho",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Đối soát đơn trả Shopee / TikTok với kho mã chung trên Google Sheet",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "node tests/e2e/browser.e2e.js"
+  },
+  "devDependencies": {
+    "chart.js": "^4.4.1",
+    "xlsx": "0.18.5"
+  }
+}
