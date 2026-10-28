@@ -172,6 +172,11 @@ async function main() {
       ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM'],
       ['DH3', 'SPXVN99999999', 'SPX', 'Quần', 'L', '70000.00', 'HCM']
     ])]);
+    // Nhãn của file: gian đoán từ tên file, loại file đoán sẵn — sửa được
+    assert.equal(await page.inputValue('#sp_list1 .file-gian'), 'Shop A');
+    assert.equal(await page.inputValue('#sp_list1 .file-loai'), 'Đơn hàng');
+    assert.deepEqual(await page.$$eval('#sp_list1 .file-loai option', (o) => o.map((x) => x.textContent)),
+      ['Giao KTC', 'Trả hàng', 'Đơn hàng', 'Khiếu nại', 'Khác']);
     assert.ok(await page.isVisible('#sp_empty'), 'chưa đối soát: hiện trạng thái rỗng');
     assert.ok(!(await page.isVisible('#sp_results')));
     await page.click('#sp_btnRun');
@@ -191,7 +196,13 @@ async function main() {
     assert.deepEqual(Object.keys(ls).sort(), ['chiTiet', 'hanhDong', 'thoiGian'], 'lịch sử không có tên người');
     assert.match(ls.chiTiet, /chuyển 2 mã sang Đã khớp/);
     await page.screenshot({ path: path.join(OUT, '4-shopee-ket-qua.png'), fullPage: true });
-    step('Shopee: đọc kho chung, xác nhận, chỉ xoá 2 mã Shopee đã khớp, ghi lịch sử');
+    // Khối "Vừa khớp lần này"
+    assert.ok(await page.isVisible('#sp_vkCard'));
+    assert.equal(await page.textContent('#sp_vkCount'), '(2 mã)');
+    assert.equal(await page.textContent('#sp_vkNote'), 'Đã chuyển sang Đã khớp');
+    assert.equal(await page.locator('#sp_vkBody tr').count(), 2);
+    assert.match(await page.locator('#sp_vkBody').innerText(), /862330000001\s+Shop A\s+Đơn hàng\s+\d{2}\/\d{2}\/\d{4}/);
+    step('Shopee: xác nhận "Sẽ chuyển N mã sang Đã khớp", mã khớp chuyển trạng thái (không xoá), nhãn gian/loại, khối Vừa khớp, lịch sử không tên');
 
     const exA = await readDownload(page, () => page.click('#sp_btnExportA'));
     const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1 });
@@ -202,6 +213,18 @@ async function main() {
     assert.equal(exA.wb.Sheets[exA.wb.SheetNames[0]].C2.z, '@');
     step('Shopee: xuất "Sàn báo, kho chưa nhận" đúng bộ cột, tuần ISO, KHO trống');
 
+    // Đối soát lại cùng file: mã đã khớp vẫn tính là khớp, không hỏi, không đổi ngày khớp / nhãn cũ
+    const before1 = row(ctl, '862330000001').join('|');
+    await page.locator('#sp_list1 .file-gian').fill('Shop A sửa tên');
+    await page.click('#sp_btnRun');
+    await page.locator('#sp_syncBox.done', { hasText: 'Không có mã Chờ đối soát nào khớp' }).waitFor();
+    assert.equal(await page.locator('.modal').count(), 0, 'không hỏi khi không có gì để chuyển');
+    assert.equal(await page.textContent('#sp_sumMatched'), '2');
+    assert.equal(await page.textContent('#sp_mRate'), '67%');
+    assert.equal(row(ctl, '862330000001').join('|'), before1, 'không đổi ngày khớp, gian, loại file cũ');
+    assert.ok(!(await page.isVisible('#sp_vkCard')), 'không có mã nào vừa khớp');
+    step('Đối soát lại: mã đã khớp vẫn tính là khớp, không báo lỗi, không đổi ngày khớp / nhãn cũ');
+
     /* ---- Tab TikTok ---- */
     await page.click('#platBtn_tt');
     await page.setInputFiles('#tt_inp1', [xlsxFile('TIKTOK_Gian_1_giao.xlsx', [
@@ -210,6 +233,10 @@ async function main() {
       ['O2', 'GYABC123', 'Lịch', 'Xanh', 'GHN', '50000', 'Cash on delivery'],
       ['O3', '862330000077', 'Lịch', 'Vàng', 'J&T', '50000', 'Cash on delivery']
     ])]);
+    assert.equal(await page.inputValue('#tt_list1 .file-gian'), 'Gian 1 giao');
+    assert.equal(await page.inputValue('#tt_list1 .file-loai'), 'Giao KTC');
+    await page.locator('#tt_list1 .file-gian').fill('Gian Một');
+    await page.selectOption('#tt_list1 .file-loai', 'Giao KTC');
     await page.click('#tt_btnRun');
     await page.locator('.modal', { hasText: 'Sẽ chuyển 1 mã sang Đã khớp. Đồng ý?' }).waitFor();
     await modalClick(page, 'Huỷ');
@@ -218,15 +245,70 @@ async function main() {
     await page.click('#tt_syncBox button');
     await page.locator('#tt_syncBox.done').waitFor();
     assert.deepEqual(cho(ctl), ['GYABC123', 'VNGH00000003'], 'GY bị lọc vẫn Chờ đối soát');
-    assert.deepEqual(row(ctl, '862330000002').slice(3, 7), ['khop', 'tiktok', 'Gian 1 giao', 'Giao KTC']);
+    assert.deepEqual(row(ctl, '862330000002').slice(3, 7), ['khop', 'tiktok', 'Gian Một', 'Giao KTC'], 'gian sửa tay đi theo mã');
     assert.equal(await page.textContent('#tt_mFiltered'), '1');
-    step('TikTok: huỷ không đổi kho; ghi lại chỉ xoá mã TikTok, GY bị lọc vẫn còn trong kho');
+    step('TikTok: huỷ không đổi kho; ghi lại chỉ chuyển mã TikTok, GY bị lọc vẫn Chờ đối soát, gian sửa tay đi theo mã');
 
     const ttA = await readDownload(page, () => page.click('#tt_btnExportA'));
     const ttRows = XLSX.utils.sheet_to_json(ttA.wb.Sheets[ttA.wb.SheetNames[0]], { header: 1 });
     assert.deepEqual(ttRows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng TikTok', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại']);
     assert.equal(ttRows[1][2], '862330000077');
     step('TikTok: xuất đúng bộ cột "Gian hàng TikTok"');
+
+    /* ---- Tab Đã đối soát ---- */
+    await page.click('#platBtn_ds');
+    await page.locator('#ds_count', { hasText: '3 / 3 mã đã khớp' }).waitFor();
+    assert.match(await page.textContent('#ds_giu'), /Giữ 60 ngày rồi tự dọn/);
+    assert.deepEqual(await page.$$eval('#pane_ds thead th', (t) => t.map((x) => x.textContent)),
+      ['STT', 'Mã vận đơn', 'Sàn', 'Gian hàng', 'Loại file', 'Ngày đối soát', 'Ngày khớp']);
+    await page.selectOption('#ds_san', 'tiktok');
+    assert.equal(await page.textContent('#ds_count'), '1 / 3 mã đã khớp');
+    assert.match(await page.locator('#ds_tbody').innerText(), /862330000002\s+TikTok\s+Gian Một\s+Giao KTC/);
+    const dsx = await readDownload(page, () => page.click('#ds_export'));
+    const dsRows = XLSX.utils.sheet_to_json(dsx.wb.Sheets[dsx.wb.SheetNames[0]], { header: 1 });
+    assert.equal(dsRows.length, 2, 'xuất đúng bộ lọc đang chọn');
+    assert.equal(dsRows[1][1], '862330000002');
+    assert.equal(dsx.wb.Sheets[dsx.wb.SheetNames[0]].B2.z, '@');
+    await page.selectOption('#ds_san', '');
+    const weeks = await page.$$eval('#ds_tuan option', (o) => o.map((x) => x.textContent));
+    assert.match(weeks[1], /^Tuần \d+\/\d{4}$/);
+    await page.selectOption('#ds_tuan', { index: 1 });
+    assert.equal(await page.textContent('#ds_count'), '3 / 3 mã đã khớp');
+    await page.selectOption('#ds_gian', 'Shop A');
+    assert.equal(await page.textContent('#ds_count'), '2 / 3 mã đã khớp');
+    await page.fill('#ds_q', 'spxvn');
+    assert.equal(await page.textContent('#ds_count'), '1 / 3 mã đã khớp');
+    await page.fill('#ds_q', ''); await page.selectOption('#ds_gian', ''); await page.selectOption('#ds_tuan', '');
+    await page.screenshot({ path: path.join(OUT, '5a-da-doi-soat.png'), fullPage: true });
+    step('Tab Đã đối soát: bảng mã đã khớp (không cột người), lọc sàn / gian / tuần ISO / tìm mã, xuất Excel theo bộ lọc');
+
+    // Ô "Tìm một mã" ở đầu trang
+    await page.fill('#lookupInput', '862330000001');
+    assert.equal(await page.textContent('#lookupStatus'), 'Đã khớp');
+    assert.match(await page.locator('#lookupResult').innerText(), /Ngày đối soát: \d{2}\/\d{2}\/\d{4}.*Ngày khớp: \d{2}\/\d{2}\/\d{4}.*Sàn: Shopee.*Gian hàng: Shop A.*Loại file: Đơn hàng/s);
+    await page.fill('#lookupInput', 'vngh-00000003');
+    assert.equal(await page.textContent('#lookupStatus'), 'Chờ đối soát');
+    await page.fill('#lookupInput', 'ZZZZ99999');
+    assert.equal(await page.textContent('#lookupStatus'), 'Không có trong kho');
+    await page.fill('#lookupInput', '');
+    step('Tìm một mã: Đã khớp / Chờ đối soát / Không có trong kho kèm ngày, sàn, gian, loại file');
+
+    // Chống nạp trùng: mã đã khớp nạp lại -> báo và bỏ qua
+    await page.click('#platBtn_kho');
+    await page.fill('#kho_input', '[QR]: 862330000001\n[QR]: MOI0000001');
+    await page.click('text=Xử lý & xem trước');
+    await page.locator('#kho_daKhopBox', { hasText: '1 mã đã khớp trước đó (ngày' }).waitFor();
+    assert.match(await page.textContent('#kho_saveHint'), /Sẽ gửi 1 mã hợp lệ/);
+    assert.match(await page.locator('#kho_tbody').innerText(), /Đã khớp trước đó \(\d{2}\/\d{2}\/\d{4}\) — bỏ qua/);
+    await page.click('text=Xoá hết');
+    step('Nạp lại mã đã khớp: xem trước báo "N mã đã khớp trước đó (ngày …), bỏ qua"');
+
+    // Không còn chỗ nào hiện tên người
+    const pageText = await page.evaluate(() => document.body.innerText);
+    assert.ok(!/Tên người|Người tải|Người gửi/.test(pageText));
+    assert.deepEqual(await page.$$eval('#kho_history', (t) => t.map((x) => x.closest('table').querySelector('thead').innerText.split(/\t|\n/).filter(Boolean))),
+      [['Thời gian', 'Hành động', 'Chi tiết']]);
+    assert.equal(await page.locator('#kho_name').count(), 0);
 
     /* ---- Hoàn tác ---- */
     await page.click('#platBtn_kho');
@@ -260,7 +342,7 @@ async function main() {
     step('Mặc định Mèo con Sáng, có con vật; thẻ "Tồn từ 7 ngày" tô cảnh báo khi > 0');
 
     // Màu nhấn đổi theo tab đang xem
-    for (const t of ['kho', 'sp', 'tt']) {
+    for (const t of ['kho', 'sp', 'tt', 'ds']) {
       await page.click('#platBtn_' + t);
       const c = await page.evaluate((t) => {
         const probe = document.createElement('div');
@@ -268,14 +350,16 @@ async function main() {
         document.body.appendChild(probe);
         const want = getComputedStyle(probe).backgroundColor; probe.remove();
         return { want, tab: getComputedStyle(document.getElementById('platBtn_' + t)).backgroundColor,
-          btn: getComputedStyle(document.querySelector('#pane_' + t + ' .btn-main')).backgroundColor,
+          btn: document.querySelector('#pane_' + t + ' .btn-main') ? getComputedStyle(document.querySelector('#pane_' + t + ' .btn-main')).backgroundColor : want,
+          cardTop: getComputedStyle(document.querySelector('#pane_' + t + ' .card')).borderTopColor,
           accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() };
       }, t);
       assert.equal(c.tab, c.want, 'tab ' + t + ' tô màu riêng');
       assert.equal(c.btn, c.want, 'nút chính tab ' + t + ' lấy màu tab');
+      assert.equal(c.cardTop, c.want, 'viền thẻ tab ' + t + ' lấy màu tab');
     }
-    const colours = await page.evaluate(() => ['kho', 'sp', 'tt'].map((t) => getComputedStyle(document.getElementById('platBtn_' + t)).getPropertyValue('--c').trim()));
-    assert.equal(new Set(colours).size, 3);
+    const colours = await page.evaluate(() => ['kho', 'sp', 'tt', 'ds'].map((t) => getComputedStyle(document.getElementById('platBtn_' + t)).getPropertyValue('--c').trim()));
+    assert.equal(new Set(colours).size, 4);
     step('Tab đang chọn tô màu riêng, nút chính đổi màu theo tab');
 
     // Chuẩn bị trang để quét: tab Kho có bảng xem trước, Shopee/TikTok có kết quả
@@ -338,7 +422,7 @@ async function main() {
       await page.keyboard.press('Escape');
       await page.locator('#themePanel').waitFor({ state: 'hidden' });
 
-      for (const t of ['kho', 'sp', 'tt']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds']) {
         await page.click('#platBtn_' + t);
         const r = await scanContrast(page);
         assert.ok(r.checked > 40, name + ' ' + t + ' quét ' + r.checked + ' phần tử');
@@ -350,7 +434,7 @@ async function main() {
           const tables = await page.evaluate((t) => [...document.querySelectorAll('#pane_' + t + ' table, #pane_' + t + ' .chart-card')].map((e) => e.innerText).join(' '), t);
           assert.ok(!ANIMALS.test(tables), name + ': không con vật trong bảng/biểu đồ');
         }
-        if (t !== 'kho') {
+        if (t === 'sp' || t === 'tt') {
           const chart = await page.evaluate((t) => {
             const ch = Chart.getChart(document.getElementById(t + '_chartShip'));
             return { got: ch.options.plugins.legend.labels.color, want: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() };
@@ -410,7 +494,7 @@ async function main() {
     await mobile.locator('#st_count', { hasText: /^\d+$/ }).waitFor();
     for (const [chuDe, cheDo] of VARIANTS) {
       await mobile.evaluate((t) => Theme.set(t), { chuDe, cheDo });
-      for (const t of ['kho', 'sp', 'tt']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds']) {
         await mobile.click('#platBtn_' + t);
         const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         assert.ok(over <= 0, chuDe + '-' + cheDo + ' tab ' + t + ' tràn ngang ' + over + 'px');
@@ -422,7 +506,7 @@ async function main() {
       await mobile.click('#platBtn_kho');
       await mobile.screenshot({ path: path.join(OUT, 'dien-thoai-' + chuDe + '-' + cheDo + '.png'), fullPage: false });
     }
-    step('Điện thoại 390px: 6 biến thể × 3 tab không tràn ngang, hộp chọn chủ đề vừa màn hình');
+    step('Điện thoại 390px: 6 biến thể × 4 tab không tràn ngang, hộp chọn chủ đề vừa màn hình');
   } finally {
     await browser.close();
     srv.close();
