@@ -77,6 +77,8 @@ async function modalClick(page, label) {
 }
 
 const codes = (ctl) => ctl.gas.get().kho.map((r) => r[0]).sort();
+const cho = (ctl) => ctl.gas.get().kho.filter((r) => r[3] === 'cho').map((r) => r[0]).sort();
+const row = (ctl, ma) => ctl.gas.get().kho.find((r) => r[0] === ma);
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
@@ -174,11 +176,13 @@ async function main() {
     assert.ok(await page.isVisible('#sp_empty'), 'chưa đối soát: hiện trạng thái rỗng');
     assert.ok(!(await page.isVisible('#sp_results')));
     await page.click('#sp_btnRun');
-    await page.locator('.modal', { hasText: 'Sẽ xoá 2 mã đã khớp khỏi kho chung' }).waitFor();
+    await page.locator('.modal', { hasText: 'Sẽ chuyển 2 mã sang Đã khớp. Đồng ý?' }).waitFor();
     await page.screenshot({ path: path.join(OUT, '3-shopee-xac-nhan.png') });
-    await modalClick(page, 'Xoá 2 mã');
+    await modalClick(page, 'Chuyển 2 mã');
     await page.locator('#sp_syncBox.done').waitFor();
-    assert.deepEqual(codes(ctl), ['862330000002', 'GYABC123', 'VNGH00000003']);
+    assert.deepEqual(cho(ctl), ['862330000002', 'GYABC123', 'VNGH00000003']);
+    assert.equal(codes(ctl).length, 5, 'mã khớp KHÔNG bị xoá khỏi kho');
+    assert.deepEqual(row(ctl, '862330000001').slice(3, 7), ['khop', 'shopee', 'Shop A', 'Đơn hàng']);
     assert.equal(await page.textContent('#sp_mMissA'), '1');
     assert.ok(!(await page.isVisible('#sp_empty')), 'có kết quả: ẩn trạng thái rỗng');
     assert.deepEqual(await Promise.all(['Matched', 'MissA', 'MissB', 'Old'].map((k) => page.textContent('#sp_sum' + k))), ['2', '1', '3', '0']);
@@ -207,13 +211,14 @@ async function main() {
       ['O3', '862330000077', 'Lịch', 'Vàng', 'J&T', '50000', 'Cash on delivery']
     ])]);
     await page.click('#tt_btnRun');
-    await page.locator('.modal', { hasText: 'Sẽ xoá 1 mã đã khớp khỏi kho chung' }).waitFor();
+    await page.locator('.modal', { hasText: 'Sẽ chuyển 1 mã sang Đã khớp. Đồng ý?' }).waitFor();
     await modalClick(page, 'Huỷ');
     await page.locator('#tt_syncBox.pending').waitFor();
-    assert.equal(codes(ctl).length, 3, 'huỷ thì kho không đổi');
+    assert.equal(cho(ctl).length, 3, 'huỷ thì kho không đổi');
     await page.click('#tt_syncBox button');
     await page.locator('#tt_syncBox.done').waitFor();
-    assert.deepEqual(codes(ctl), ['GYABC123', 'VNGH00000003']);
+    assert.deepEqual(cho(ctl), ['GYABC123', 'VNGH00000003'], 'GY bị lọc vẫn Chờ đối soát');
+    assert.deepEqual(row(ctl, '862330000002').slice(3, 7), ['khop', 'tiktok', 'Gian 1 giao', 'Giao KTC']);
     assert.equal(await page.textContent('#tt_mFiltered'), '1');
     step('TikTok: huỷ không đổi kho; ghi lại chỉ xoá mã TikTok, GY bị lọc vẫn còn trong kho');
 
@@ -229,15 +234,17 @@ async function main() {
     await page.locator('.modal', { hasText: 'Đối soát TikTok' }).waitFor();
     await modalClick(page, 'Hoàn tác');
     await page.locator('#st_count', { hasText: '3' }).waitFor();
-    assert.ok(codes(ctl).includes('862330000002'));
+    assert.equal(row(ctl, '862330000002')[3], 'cho', 'Hoàn tác khôi phục trạng thái');
     await page.locator('#kho_history tr', { hasText: 'Hoàn tác' }).first().waitFor();
     await page.screenshot({ path: path.join(OUT, '5-lich-su.png'), fullPage: true });
     step('Hoàn tác: kho về trước lần ghi gần nhất, lịch sử hiện trên trang');
 
     const kx = await readDownload(page, () => page.click('text=Tải kho về Excel'));
     const kxRows = XLSX.utils.sheet_to_json(kx.wb.Sheets[kx.wb.SheetNames[0]], { header: 1 });
-    assert.deepEqual(kxRows[0].slice(0, 4), ['STT', 'Mã vận đơn', 'Ngày đối soát', 'Số ngày tồn']);
-    assert.equal(kxRows.length, 4);
+    assert.deepEqual(kxRows[0], ['STT', 'Mã vận đơn', 'Trạng thái', 'Ngày đối soát', 'Số ngày tồn', 'Sàn', 'Gian hàng', 'Loại file', 'Ngày khớp']);
+    assert.equal(kxRows.length, 6, '5 mã: 3 Chờ đối soát + 2 Đã khớp');
+    const khopRow = kxRows.find((r) => r[1] === '862330000001');
+    assert.deepEqual(khopRow.slice(2, 3).concat(khopRow.slice(5, 8)), ['Đã khớp', 'Shopee', 'Shop A', 'Đơn hàng']);
     step('Tải kho về Excel để sao lưu');
 
     /* ---- Chủ đề (theme) ---- */

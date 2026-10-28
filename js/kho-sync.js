@@ -1,9 +1,10 @@
 /* =====================================================================
    KhoSync — nối tab Shopee/TikTok với kho chung:
    1. loadForRun: tải kho chung mới nhất ngay khi bấm "Tiến hành đối soát".
-   2. offerRemoval: sau khi có kết quả, hỏi "Sẽ xoá N mã đã khớp khỏi kho
-      chung. Đồng ý?" rồi gửi DANH SÁCH MÃ CẦN XOÁ (không gửi cả kho), nên
-      người khác tải thêm mã cùng lúc cũng không bị đè.
+   2. offerKhop: sau khi có kết quả, hỏi "Sẽ chuyển N mã sang Đã khớp.
+      Đồng ý?" rồi gửi DANH SÁCH MÃ ĐÃ KHỚP kèm gian hàng / loại file (không
+      gửi cả kho), nên người khác tải thêm mã cùng lúc cũng không bị đè.
+      Mã không bị xoá khỏi kho; chỉ đổi trạng thái 'cho' -> 'khop'.
    ===================================================================== */
 var KhoSync = (function () {
   var esc = Common.escapeHtml, fmtNum = Common.fmtNum;
@@ -14,7 +15,7 @@ var KhoSync = (function () {
       UI.alert('Chưa cấu hình máy chủ kho chung', UI.guideHtml());
       return Promise.resolve(null);
     }
-    return Kho.refresh().then(function () { return Kho.items(); }, function (err) {
+    return Kho.refresh().then(function () { return Kho.rows(); }, function (err) {
       UI.alert('Không đọc được kho chung', esc(err.message) + '<br><br>Chưa đối soát, kho chung không thay đổi. Các file bạn đã chọn vẫn còn, bấm lại khi mạng ổn.');
       return null;
     });
@@ -38,40 +39,46 @@ var KhoSync = (function () {
     box.innerHTML = '';
   }
 
-  function offerRemoval(pfx, san, codes) {
+  /* items: [{ ma, gian, loai }] — mã 'cho' khớp chứng từ của sàn đang chạy.
+     daKhopTruoc: số mã trong chứng từ đã 'khop' từ trước (không gửi lại). */
+  function offerKhop(pfx, san, items, daKhopTruoc) {
     var label = SAN_LABEL[san];
-    if (!codes.length) {
-      banner(pfx, 'done', 'Không có mã ' + label + ' nào khớp với kho chung, kho giữ nguyên ' + fmtNum(Kho.items().length) + ' mã.');
+    var truoc = daKhopTruoc ? ' ' + fmtNum(daKhopTruoc) + ' mã khác đã khớp từ trước, giữ nguyên.' : '';
+    if (!items.length) {
+      banner(pfx, 'done', esc('Không có mã Chờ đối soát nào khớp chứng từ ' + label + '; kho chung không đổi.' + truoc));
       return Promise.resolve();
     }
     return UI.confirm('Cập nhật kho chung',
-      'Sẽ xoá <b>' + fmtNum(codes.length) + '</b> mã đã khớp khỏi kho chung. Đồng ý?' +
-      '<br><span style="font-size:12px">Chỉ xoá mã có trong chứng từ ' + label + ' vừa nạp. Mã kho còn lệch giữ nguyên với ngày đối soát cũ.</span>',
-      'Xoá ' + fmtNum(codes.length) + ' mã').then(function (ok) {
-      if (!ok) return pending(pfx, san, codes, 'Chưa ghi kết quả: ' + fmtNum(codes.length) + ' mã đã khớp ' + label + ' vẫn còn trong kho chung.');
-      return send(pfx, san, codes);
+      'Sẽ chuyển <b>' + fmtNum(items.length) + '</b> mã sang Đã khớp. Đồng ý?' +
+      '<br><span style="font-size:13px">Chỉ đổi trạng thái mã có trong chứng từ ' + label + ' vừa nạp; mã vẫn nằm trong kho (xem ở tab Đã đối soát). Mã kho còn lệch giữ nguyên với ngày đối soát cũ.' + esc(truoc) + '</span>',
+      'Chuyển ' + fmtNum(items.length) + ' mã').then(function (ok) {
+      if (!ok) return pending(pfx, san, items, 'Chưa ghi kết quả: ' + fmtNum(items.length) + ' mã khớp ' + label + ' vẫn đang Chờ đối soát.');
+      return send(pfx, san, items);
     });
   }
 
-  function pending(pfx, san, codes, msg) {
-    banner(pfx, 'pending', esc(msg), { label: 'Xoá ' + fmtNum(codes.length) + ' mã đã khớp khỏi kho', fn: function () { send(pfx, san, codes); } });
+  function pending(pfx, san, items, msg) {
+    banner(pfx, 'pending', esc(msg), { label: 'Chuyển ' + fmtNum(items.length) + ' mã sang Đã khớp', fn: function () { send(pfx, san, items); } });
   }
 
-  function send(pfx, san, codes) {
+  function send(pfx, san, items) {
     var nguoi = UI.ensureName();
-    if (!nguoi) return Promise.resolve(pending(pfx, san, codes, 'Cần nhập tên người thực hiện để ghi lịch sử. Kho chung chưa thay đổi.'));
+    if (!nguoi) return Promise.resolve(pending(pfx, san, items, 'Cần nhập tên người thực hiện để ghi lịch sử. Kho chung chưa thay đổi.'));
     banner(pfx, 'pending', 'Đang ghi kết quả vào kho chung…');
-    return Api.reconcile(nguoi, san, codes).then(function (st) {
+    var payload = items.map(function (it) { return { ma: it.ma, gian: it.gian, loai: it.loai }; });
+    return Api.reconcile(nguoi, san, payload).then(function (st) {
       Kho.apply(st);
-      var x = st.ketQua ? st.ketQua.xoa : codes.length;
-      var msg = 'Đã xoá ' + fmtNum(x) + ' mã đã khớp ' + SAN_LABEL[san] + ' khỏi kho chung. Kho còn ' + fmtNum(st.info.soMa) + ' mã.';
-      if (x < codes.length) msg += ' (' + fmtNum(codes.length - x) + ' mã đã được người khác xoá trước đó.)';
+      var k = st.ketQua || {};
+      var x = k.khop !== undefined ? k.khop : items.length;
+      var msg = 'Đã chuyển ' + fmtNum(x) + ' mã ' + SAN_LABEL[san] + ' sang Đã khớp. Kho còn ' + fmtNum(st.info.soCho) + ' mã Chờ đối soát.';
+      if (x < items.length) msg += ' (' + fmtNum(items.length - x) + ' mã đã được chuyển trước đó hoặc không còn trong kho.)';
       banner(pfx, 'done', esc(msg));
       UI.toast(msg, null, 'ok');
+      document.dispatchEvent(new CustomEvent('kho-khop', { detail: { pfx: pfx, ngayKhop: k.ngayKhop } }));
     }, function (err) {
-      pending(pfx, san, codes, 'Chưa ghi được kết quả vào kho chung: ' + err.message);
+      pending(pfx, san, items, 'Chưa ghi được kết quả vào kho chung: ' + err.message);
     });
   }
 
-  return { loadForRun: loadForRun, offerRemoval: offerRemoval, hide: hide };
+  return { loadForRun: loadForRun, offerKhop: offerKhop, hide: hide };
 })();

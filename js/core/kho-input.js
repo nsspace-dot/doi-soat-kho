@@ -104,6 +104,8 @@
     if (idIdx === undefined) return { error: 'Không tìm thấy cột "Mã vận đơn" / "Code" / "Tracking ID" trong file "' + sourceName + '".' };
     var dateIdx = Common.findCol(h.hMap, ['ngày đối soát', 'ngay doi soat']);
     var keepDates = dateIdx !== undefined && Common.findCol(h.hMap, ['số ngày tồn', 'so ngay ton']) !== undefined;
+    // File "Tải kho về Excel" có cột Trạng thái: dòng "Đã khớp" không được nạp lại thành Chờ đối soát.
+    var ttIdx = Common.findCol(h.hMap, ['=trạng thái']);
 
     var entries = [], skipped = [];
     for (var r = h.headerRow + 1; r <= rg.e.r; r++) {
@@ -111,6 +113,10 @@
       var clean = Common.sanitizeTrackingId(raw);
       if (!clean || clean.length <= 3 || !Common.isLikelyRealTrackingId(raw)) {
         if (String(raw).trim()) skipped.push(String(raw).trim());
+        continue;
+      }
+      if (ttIdx !== undefined && Common.getCellStr(ws, r, ttIdx).trim() === 'Đã khớp') {
+        skipped.push(String(raw).trim() + ' (Đã khớp trong file sao lưu — bỏ qua)');
         continue;
       }
       var e = { code: clean, raw: String(raw).trim(), symb: sourceName, date: '', sender: '' };

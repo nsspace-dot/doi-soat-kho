@@ -50,8 +50,9 @@ var App = (function () {
     }
     msg.innerHTML = '';
     var st = Kho.state, info = st.info, last = info.lanTaiCuoi;
-    var old = st.kho.filter(function (r) { var d = Common.daysSince(r[2]); return d !== null && d >= 7; }).length;
-    setStat('count', fmtNum(info.soMa), 'mã chờ đối soát');
+    // Tuổi tồn chỉ tính mã còn Chờ đối soát; mã Đã khớp không còn "tồn".
+    var old = st.kho.filter(function (r) { var d = Common.daysSince(r[2]); return !TrangThai.isKhop(r) && d !== null && d >= 7; }).length;
+    setStat('count', fmtNum(info.soCho), 'chờ đối soát · ' + fmtNum(info.soKhop) + ' mã đã khớp');
     setStat('old', fmtNum(old), old ? 'cần truy gấp' : 'không có mã tồn lâu');
     $('st_oldCard').classList.toggle('is-warn', old > 0);
     if (last) {

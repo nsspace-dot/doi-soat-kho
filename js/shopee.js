@@ -86,23 +86,26 @@ async function runMatchInner() {
   progress(2);
 
   /* ---- Kho chung: đọc từ server ngay lúc bấm ---- */
-  var khoItems = await KhoSync.loadForRun();
-  if (!khoItems) { _$('pb').style.display = 'none'; return; }
+  var khoRows = await KhoSync.loadForRun();
+  if (!khoRows) { _$('pb').style.display = 'none'; return; }
   progress(20);
 
   /* ---- Đọc 2 loại file Shopee ---- */
-  var allShopFiles = filesA.map(function(f){ return {f:f, kind:'don'}; })
-             .concat(filesB.map(function(f){ return {f:f, kind:'khieunai'}; }));
+  var allShopFiles = filesA.map(function(f){ return {f:f, kind:'don', loai:'Đơn hàng'}; })
+             .concat(filesB.map(function(f){ return {f:f, kind:'khieunai', loai:'Khiếu nại'}; }));
   var books = [];
   for (var fi = 0; fi < allShopFiles.length; fi++) {
     var item = allShopFiles[fi];
-    books.push({ wb: await Common.readWb(item.f), kind: item.kind, shop: item.f.customShopName || parseShopName(item.f.name) });
+    books.push({ wb: await Common.readWb(item.f), kind: item.kind, loai: item.loai, shop: item.f.customShopName || parseShopName(item.f.name) });
     await yieldThread();
     progress(20 + Math.round((fi+1)/allShopFiles.length*55));
   }
 
-  var R = ShopeeCore.match({ files: books, khoItems: khoItems, skipRefundOnly: _$('chkSkipRefundOnly').checked });
-  var records = R.records, missA = R.missA, missB = R.missB, khoIds = R.khoIds, shopeeIds = R.shopeeIds;
+  // Đối soát với MỌI mã trong kho (cả mã đã khớp từ trước, để đối soát lại vẫn tính là khớp),
+  // rồi tách ra: mã 'cho' cần chuyển sang 'khop', và "kho chưa có chứng từ" chỉ gồm mã 'cho'.
+  var R = ShopeeCore.match({ files: books, khoItems: TrangThai.items(khoRows), skipRefundOnly: _$('chkSkipRefundOnly').checked });
+  var T = TrangThai.sauDoiSoat(R, khoRows);
+  var records = R.records, missA = R.missA, missB = T.missB, khoIds = R.khoIds, shopeeIds = R.shopeeIds;
   var matchCount = R.matchCount, rate = R.rate, refundOnlyCount = R.refundOnlyCount, noTidCount = R.noTidCount;
 
   resultMissA = missA; resultMissB = missB;
@@ -112,7 +115,7 @@ async function runMatchInner() {
   searchStrA = ''; searchStrB = '';
 
   /* ---- Chỉ số ---- */
-  _$('mTotal').textContent   = fmtNum(khoIds.size);
+  _$('mTotal').textContent   = fmtNum(T.soCho);
   _$('mShopee').textContent  = fmtNum(shopeeIds.size);
   _$('mMatched').textContent = fmtNum(matchCount);
   _$('mRate').textContent    = rate + '%';
@@ -238,7 +241,7 @@ async function runMatchInner() {
 
   /* ---- Kho chung: xoá mã Shopee đã khớp (sau khi người dùng đồng ý) ---- */
   await yieldThread();
-  await KhoSync.offerRemoval('sp', 'shopee', R.toRemove);
+  await KhoSync.offerKhop('sp', 'shopee', T.khop, T.daKhopTruoc.length);
 }
 
 function applyChartTheme() {

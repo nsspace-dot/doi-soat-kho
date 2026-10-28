@@ -63,7 +63,7 @@
   }
 
   /* opts:
-       files: [{ wb, kind: 'don'|'khieunai', shop }]
+       files: [{ wb, kind: 'don'|'khieunai', shop, loai }]   (loai: nhãn loại file, chỉ để gắn nhãn)
        khoItems: [{ c: mã sạch, id: mã gốc, d: ngày đối soát }]  (kho chung)
        skipRefundOnly: bool
        today: 'dd/mm/yyyy'                                                    */
@@ -95,7 +95,7 @@
       // File mẫu đơn thiếu / file xuất "chưa về kho" nạp lại.
       if (Template.isListHeader(hMap)) {
         Template.readListRows(ws, h.headerRow, hMap, shop).forEach(function (x) {
-          records.push({ shop: x.shop, kind: 'exported', typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
+          records.push({ shop: x.shop, kind: 'exported', loai: item.loai, typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
             oid: '', prod: x.prod, variant: x.variant, prov: '', pay: '', dvvc: '', amt: 0, kho: x.kho, week: x.week });
         });
         return;
@@ -149,7 +149,7 @@
         var amt = amtIdx !== undefined ? parseMoneyShopee(getCellStr(ws, r, amtIdx)) : 0;   // S9
         if (!amt && amtAltIdx !== undefined) amt = parseMoneyShopee(getCellStr(ws, r, amtAltIdx));
         records.push({
-          shop: shop, kind: kind, tid: rawTid, cleanTid: cleanTid,
+          shop: shop, kind: kind, loai: item.loai, tid: rawTid, cleanTid: cleanTid,
           oid:  oidIdx  !== undefined ? getCellStr(ws, r, oidIdx)  : '',
           prod: prodIdx !== undefined ? getCellStr(ws, r, prodIdx) : '',
           variant: variantIdx !== undefined ? getCellStr(ws, r, variantIdx) : '',

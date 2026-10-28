@@ -84,34 +84,42 @@ async function runMatchInner() {
   KhoSync.hide('tt');
   progress(2);
 
-  var khoItems = await KhoSync.loadForRun();
-  if (!khoItems) { _$('pb').style.display = 'none'; return; }
+  var khoRows = await KhoSync.loadForRun();
+  if (!khoRows) { _$('pb').style.display = 'none'; return; }
   progress(20);
 
   var filterOther = _$('chkFilterOther').checked; // T2
   var books = [];
   for (var fi = 0; fi < filesA.length; fi++) {
     var f = filesA[fi];
-    books.push({ wb: await Common.readWb(f), shop: f.customShopName || parseShopName(f.name), ftype: parseFileType(f.name) });
+    var ft = parseFileType(f.name);
+    books.push({ wb: await Common.readWb(f), shop: f.customShopName || parseShopName(f.name), ftype: ft,
+                 loai: ft === 'giao' ? 'Giao KTC' : ft === 'tra' ? 'Trả hàng' : 'Khác' });
     await yieldThread();
     progress(20 + Math.round((fi+1)/filesA.length*55));
   }
 
-  var R = TikTokCore.match({ files: books, khoItems: khoItems, filterOther: filterOther });
-  var tikTokRecords = R.records, missA = R.missA, missB = R.missB, doiSoatIds = R.khoIds, cleanTikTokIds = R.tikTokIds;
-  var filteredIds = R.filteredIds, matchCount = R.matchCount, rate = R.rate;
+  // Đối soát với MỌI mã trong kho (cả mã đã khớp từ trước), rồi tách mã 'cho' cần chuyển sang 'khop'.
+  // Mã bị bộ lọc (SPXVN/GY…) nằm ngoài R.khoIds nên không bao giờ bị đổi trạng thái.
+  var R = TikTokCore.match({ files: books, khoItems: TrangThai.items(khoRows), filterOther: filterOther });
+  var T = TrangThai.sauDoiSoat(R, khoRows);
+  var tikTokRecords = R.records, missA = R.missA, missB = T.missB, doiSoatIds = R.khoIds, cleanTikTokIds = R.tikTokIds;
+  var matchCount = R.matchCount, rate = R.rate;
+  // Mã đã lọc (SPXVN/GY…): không tính mã đã 'Đã khớp' từ trước (đã xong việc, chỉ còn nằm chờ dọn).
+  var stMap = TrangThai.statusMap(khoRows);
+  var filteredIds = new Set(Array.from(R.filteredIds).filter(function (c) { var x = stMap.get(c); return !x || x.trangThai !== TrangThai.KHOP; }));
   var colors = ['#ff0050','#00f2fe','#10b981','#3b82f6','#f59e0b','#ef4444','#71717a','#a855f7'];
 
   resultMissA = missA;
   resultMissB = missB;
-  resultFiltered = R.filtered;
+  resultFiltered = T.filtered;
   pageA = 1; pageB = 1;
   _$('searchA').value = '';
   _$('searchB').value = '';
   searchStrA = ''; searchStrB = '';
 
   // Điền số liệu
-  _$('mTotal').textContent = fmtNum(doiSoatIds.size);
+  _$('mTotal').textContent = fmtNum(T.soCho);
   _$('mTikTok').textContent = fmtNum(cleanTikTokIds.size);
   _$('mMatched').textContent = fmtNum(matchCount);
   _$('mRate').textContent = rate + '%';
@@ -251,7 +259,7 @@ async function runMatchInner() {
 
   /* Kho chung: chỉ xoá mã TikTok đã khớp; mã bị lọc (SPXVN/GY) không nằm trong R.toRemove. */
   await yieldThread();
-  await KhoSync.offerRemoval('tt', 'tiktok', R.toRemove);
+  await KhoSync.offerKhop('tt', 'tiktok', T.khop, T.daKhopTruoc.length);
 }
 
 function handleSearchA() { searchStrA = _$('searchA').value.toLowerCase().trim(); pageA=1; renderTableA(); }

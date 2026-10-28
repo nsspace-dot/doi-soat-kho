@@ -110,6 +110,10 @@
         <div class="metric-card red"><div class="m-label">Dòng lỗi / mã sai</div><div class="m-value" id="kho_sSkip">0</div><div class="m-sub">không gửi lên</div></div>
         <div class="metric-card pink"><div class="m-label">Mã mới</div><div class="m-value" id="kho_sNew">—</div><div class="m-sub" id="kho_sNewSub"></div></div>
       </div>
+      <div class="info-box" id="kho_daKhopBox" hidden>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span></span>
+      </div>
       <details class="skipped" id="kho_skippedBox" style="display:none">
         <summary id="kho_skippedSummary">Xem các dòng chưa nhận diện được</summary>
         <pre id="kho_skippedList"></pre>
@@ -154,7 +158,7 @@
     </div>
     <div class="info-box">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span>Kho chung dùng cho cả Shopee và TikTok. Khi đối soát một sàn, chỉ những mã khớp chứng từ của sàn đó mới bị xoá khỏi kho; các mã còn lại giữ nguyên ngày đối soát cũ. <b>Hoàn tác</b> đưa kho về trước lần ghi gần nhất (của bất kỳ ai), bấm lần nữa để làm lại.</span>
+      <span>Kho chung dùng cho cả Shopee và TikTok. Khi đối soát một sàn, chỉ những mã khớp chứng từ của sàn đó mới chuyển sang <b>Đã khớp</b> (không xoá khỏi kho); các mã còn lại giữ nguyên Chờ đối soát với ngày đối soát cũ. Mã tự dọn sau 60 ngày. <b>Hoàn tác</b> đưa kho về trước lần ghi gần nhất (của bất kỳ ai), bấm lần nữa để làm lại.</span>
     </div>
     <div class="table-wrap">
       <table class="history">
@@ -210,7 +214,7 @@
     <details class="help">
       <summary><span aria-hidden="true">ⓘ</span> Cách đối soát với kho chung</summary>
       <div class="help-body">
-        <p>Mã kho được đọc từ <b>kho chung</b> ngay khi bấm “Tiến hành đối soát”. Mã Shopee đã khớp sẽ được xoá khỏi kho chung sau khi bạn đồng ý; mã kho còn lệch giữ nguyên ngày đối soát cũ.</p>
+        <p>Mã kho được đọc từ <b>kho chung</b> ngay khi bấm “Tiến hành đối soát”. Mã Shopee đã khớp được chuyển sang <b>Đã khớp</b> sau khi bạn đồng ý (vẫn nằm trong kho, xem ở tab Đã đối soát); mã kho còn lệch giữ nguyên ngày đối soát cũ.</p>
         <p>Đơn có <code>Phương án = Hoàn tiền ngay</code> hoặc <code>Trạng thái trả hàng = Không</code> thì khách không gửi hàng — không tính là thất thoát.</p>
       </div>
     </details>
@@ -241,7 +245,7 @@
     <section class="card">
       <h2 class="section-label">Kết quả đối soát tổng quan</h2>
       <div class="metrics-grid">
-        <div class="metric-card"><div class="m-label">Tổng mã Kho</div><div class="m-value" id="sp_mTotal">—</div><div class="m-sub">Mã trong kho chung</div></div>
+        <div class="metric-card"><div class="m-label">Tổng mã Kho</div><div class="m-value" id="sp_mTotal">—</div><div class="m-sub">Mã Chờ đối soát</div></div>
         <div class="metric-card"><div class="m-label">Tổng mã Shopee</div><div class="m-value" id="sp_mShopee">—</div><div class="m-sub">Từ 2 loại file đơn</div></div>
         <div class="metric-card green"><div class="m-label">Đã về kho</div><div class="m-value" id="sp_mMatched">—</div><div class="m-sub">Khớp mã vận đơn</div></div>
         <div class="metric-card pink"><div class="m-label">Tỷ lệ về kho</div><div class="m-value" id="sp_mRate">—</div><div class="m-sub">mã Shopee đã có ở Kho</div></div>
@@ -314,7 +318,7 @@
         </div>
         <div class="info-box">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>Kho chung quét mọi sàn nên danh sách này có thể gồm cả hàng trả TikTok — các mã này <b>không bị xoá</b> khi đối soát Shopee. Cột <b>Ngày đối soát</b> là ngày mã được tải lên kho chung.</span>
+          <span>Kho chung quét mọi sàn nên danh sách này có thể gồm cả hàng trả TikTok — các mã này <b>không bị đổi trạng thái</b> khi đối soát Shopee. Cột <b>Ngày đối soát</b> là ngày mã được tải lên kho chung.</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -358,8 +362,8 @@
     <details class="help">
       <summary><span aria-hidden="true">ⓘ</span> Cách đối soát với kho chung</summary>
       <div class="help-body">
-        <p>Mã kho được đọc từ <b>kho chung</b> ngay khi bấm “Tiến hành đối soát”. Mã TikTok đã khớp sẽ được xoá khỏi kho chung sau khi bạn đồng ý; mã kho còn lệch giữ nguyên ngày đối soát cũ.</p>
-        <p>Bộ lọc bỏ mã <code>SPXVN…</code> (SPX Express) và <code>GY…</code> 8 ký tự (GHN) — hai loại này chỉ xuất hiện ở đơn Shopee. Các mã này <b>vẫn giữ trong kho chung</b>, không bị xoá.</p>
+        <p>Mã kho được đọc từ <b>kho chung</b> ngay khi bấm “Tiến hành đối soát”. Mã TikTok đã khớp được chuyển sang <b>Đã khớp</b> sau khi bạn đồng ý (vẫn nằm trong kho, xem ở tab Đã đối soát); mã kho còn lệch giữ nguyên ngày đối soát cũ.</p>
+        <p>Bộ lọc bỏ mã <code>SPXVN…</code> (SPX Express) và <code>GY…</code> 8 ký tự (GHN) — hai loại này chỉ xuất hiện ở đơn Shopee. Các mã này <b>không bị đổi trạng thái</b>, vẫn Chờ đối soát trong kho chung.</p>
       </div>
     </details>
     <div class="action-row">
@@ -389,7 +393,7 @@
     <section class="card">
       <h2 class="section-label">Kết quả đối soát tổng quan</h2>
       <div class="metrics-grid">
-        <div class="metric-card"><div class="m-label">Tổng mã Kho</div><div class="m-value" id="tt_mTotal">—</div><div class="m-sub">Mã kho chung, sau lọc</div></div>
+        <div class="metric-card"><div class="m-label">Tổng mã Kho</div><div class="m-value" id="tt_mTotal">—</div><div class="m-sub">Mã Chờ đối soát, sau lọc</div></div>
         <div class="metric-card"><div class="m-label">Tổng mã TikTok</div><div class="m-value" id="tt_mTikTok">—</div><div class="m-sub">Từ báo cáo hoàn trả</div></div>
         <div class="metric-card green"><div class="m-label">Khớp thành công</div><div class="m-value" id="tt_mMatched">—</div><div class="m-sub">Đã nhận diện đủ chứng từ</div></div>
         <div class="metric-card pink"><div class="m-label">Tỷ lệ đối khớp</div><div class="m-value" id="tt_mRate">—</div><div class="m-sub">mã TikTok đã có ở Kho</div></div>
@@ -480,6 +484,7 @@
 <script src="js/core/kho-input.js"></script>
 <script src="js/core/shopee-core.js"></script>
 <script src="js/core/tiktok-core.js"></script>
+<script src="js/core/trang-thai.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/kho-sync.js"></script>

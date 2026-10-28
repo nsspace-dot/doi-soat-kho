@@ -77,7 +77,7 @@
   }
 
   /* opts:
-       files: [{ wb, shop, ftype: 'giao'|'tra'|'exported' }]
+       files: [{ wb, shop, ftype: 'giao'|'tra'|'exported', loai }]   (loai: nhãn loại file, chỉ để gắn nhãn)
        khoItems: [{ c, id, d }]   (kho chung)
        filterOther: bool          (loại SPXVN / GY… khỏi đối soát)
        today: 'dd/mm/yyyy'                                                    */
@@ -141,7 +141,7 @@
       if (Template.isListHeader(hMap)) {
         Template.readListRows(ws, headerRow, hMap, shop || '(Xuất lại)').forEach(function (x) {
           if (filterOther && isOtherPlatformId(x.cleanTid)) { filteredIds.add(x.cleanTid); return; } // T2
-          tikTokRecords.push({ shop: x.shop, type: 'exported', typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
+          tikTokRecords.push({ shop: x.shop, type: 'exported', loai: item.loai, typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
             prod: x.prod, variant: x.variant, refund: 0, ship: '', pay: '', prov: '', kho: x.kho, week: x.week });
         });
         return;
@@ -175,7 +175,7 @@
         var cleanTid2 = sanitizeTrackingId(tid2);
         if (filterOther && isOtherPlatformId(cleanTid2)) { filteredIds.add(cleanTid2); continue; } // T2
         tikTokRecords.push({
-          shop: shop, type: ftype, tid: tid2, cleanTid: cleanTid2,
+          shop: shop, type: ftype, loai: item.loai, tid: tid2, cleanTid: cleanTid2,
           prod:    prodIdx    !== undefined ? getCellStr(ws, row2, prodIdx)    : '',
           variant: variantIdx !== undefined ? getCellStr(ws, row2, variantIdx) : '',
           refund:  refundIdx  !== undefined ? parseMoneyTikTok(getCellStr(ws, row2, refundIdx)) : 0, // T3
