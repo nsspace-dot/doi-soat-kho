@@ -37,36 +37,17 @@ var KhoSync = (function () {
     var box = document.getElementById(pfx + '_syncBox');
     box.className = 'sync-banner';
     box.innerHTML = '';
-    vk[pfx] = null;
-    renderVuaKhop(pfx);
+    setNote(pfx, null);
   }
 
-  /* ---------- Khối "Vừa khớp lần này" (bảng gọn, có phân trang) ---------- */
-  var vk = {};
-  function showVuaKhop(pfx, items) { vk[pfx] = { items: items, page: 1, ok: false, note: 'Chờ xác nhận ghi vào kho chung', ngay: '' }; renderVuaKhop(pfx); }
-  function markVuaKhop(pfx, ok, note, ngay) {
-    if (!vk[pfx]) return;
-    vk[pfx].ok = ok; vk[pfx].note = note; if (ngay) vk[pfx].ngay = ngay;
-    renderVuaKhop(pfx);
-  }
-  function renderVuaKhop(pfx) {
-    var card = document.getElementById(pfx + '_vkCard');
-    if (!card) return;
-    var d = vk[pfx];
-    card.hidden = !d || !d.items.length;
-    if (card.hidden) return;
-    var size = 10, total = Math.max(1, Math.ceil(d.items.length / size));
-    if (d.page > total) d.page = total;
-    var start = (d.page - 1) * size;
-    document.getElementById(pfx + '_vkCount').textContent = '(' + fmtNum(d.items.length) + ' mã)';
-    var note = document.getElementById(pfx + '_vkNote');
-    note.className = 'chip ' + (d.ok ? 'chip-ok' : 'chip-warn');
-    note.textContent = d.note;
-    document.getElementById(pfx + '_vkBody').innerHTML = d.items.slice(start, start + size).map(function (it, i) {
-      return '<tr><td>' + (start + i + 1) + '</td><td><code>' + esc(it.maGoc || it.ma) + '</code></td><td>' + esc(it.gian || '—') +
-        '</td><td><span class="type-tag">' + esc(it.loai) + '</span></td><td>' + esc(d.ngay || '—') + '</td></tr>';
-    }).join('');
-    UI.renderPager(document.getElementById(pfx + '_vkPager'), d.page, total, function (p) { d.page = p; renderVuaKhop(pfx); });
+  /* ---------- Ghi chú trạng thái ghi kho cho tab con "Đã khớp kho" ----------
+     note: null | { ok: bool, text: chuỗi, ngay: 'dd/mm/yyyy' }                */
+  var notes = {}, noteFns = {};
+  function onNote(pfx, fn) { noteFns[pfx] = fn; }
+  function setNote(pfx, note) { notes[pfx] = note; if (noteFns[pfx]) noteFns[pfx](note); }
+  function markVuaKhop(pfx, ok, text, ngay) {
+    var cur = notes[pfx] || {};
+    setNote(pfx, { ok: ok, text: text, ngay: ngay || cur.ngay || '' });
   }
 
   /* items: [{ ma, gian, loai }] — mã 'cho' khớp chứng từ của sàn đang chạy.
@@ -74,7 +55,7 @@ var KhoSync = (function () {
   function offerKhop(pfx, san, items, daKhopTruoc) {
     var label = SAN_LABEL[san];
     var truoc = daKhopTruoc ? ' ' + fmtNum(daKhopTruoc) + ' mã khác đã khớp từ trước, giữ nguyên.' : '';
-    showVuaKhop(pfx, items);
+    setNote(pfx, items.length ? { ok: false, text: 'Chờ xác nhận ghi vào kho chung', ngay: '' } : null);
     if (!items.length) {
       banner(pfx, 'done', esc('Không có mã Chờ đối soát nào khớp chứng từ ' + label + '; kho chung không đổi.' + truoc));
       return Promise.resolve();
@@ -110,5 +91,5 @@ var KhoSync = (function () {
     });
   }
 
-  return { loadForRun: loadForRun, offerKhop: offerKhop, hide: hide };
+  return { loadForRun: loadForRun, offerKhop: offerKhop, hide: hide, onNote: onNote };
 })();

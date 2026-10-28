@@ -16,6 +16,8 @@ var shipChart = null, prodChart = null, provChart = null;
 var resultMissA = [], resultMissB = [];
 var searchStrA = "", searchStrB = "";
 var pageA = 1, pageB = 1;
+// Tab con "Đã khớp kho": mã trong chứng từ có trong kho (cả mã đã khớp từ trước).
+var resultKhop = [], searchStrC = '', pageC = 1, khopNote = null;
 var running = false;
 const pageSize = 10;
 const SHOPEE_COLORS = ['#ee4d2d','#f69113','#1d9e75','#3b82f6','#a855f7','#b45309','#ef4444','#71717a'];
@@ -101,6 +103,7 @@ async function runMatchInner() {
 
   resultMissA = missA; resultMissB = missB;
   pageA = 1; pageB = 1;
+  resultKhop = KhopKho.list(R, khoRows, T.khop); pageC = 1; searchStrC = ''; _$('searchC').value = '';
   _$('searchA').value = '';
   _$('searchB').value = '';
   searchStrA = ''; searchStrB = '';
@@ -232,6 +235,7 @@ async function runMatchInner() {
 
   /* ---- Kho chung: xoá mã Shopee đã khớp (sau khi người dùng đồng ý) ---- */
   await yieldThread();
+  renderTableC();
   await KhoSync.offerKhop('sp', 'shopee', T.khop, T.daKhopTruoc.length);
 }
 
@@ -293,6 +297,47 @@ function renderTableB() {
   UI.renderPager(pager, pageB, totalPages, function(p){ pageB=p; renderTableB(); });
 }
 
+/* ---- Tab con "Đã khớp kho" ---- */
+function handleSearchC() { searchStrC = _$('searchC').value; pageC = 1; renderTableC(); }
+
+function renderTableC() {
+  var tbody = _$('tbodyC'), pager = _$('pagerC');
+  var filtered = KhopKho.filter(resultKhop, searchStrC);
+  var moi = resultKhop.filter(function(x){ return x.vuaKhop; }).length;
+  _$('cntC').textContent = '(' + fmtNum(resultKhop.length) + ')';
+  _$('btnExportC').disabled = !filtered.length;
+  _$('kcSummary').textContent = resultKhop.length
+    ? fmtNum(resultKhop.length) + ' mã khớp kho: ' + fmtNum(moi) + ' vừa khớp lần này, ' + fmtNum(resultKhop.length - moi) + ' đã khớp từ trước.'
+    : '';
+  var note = _$('kcNote');
+  note.hidden = !khopNote || !moi;
+  if (khopNote) {
+    note.className = 'chip ' + (khopNote.ok ? 'chip-ok' : 'chip-warn');
+    note.textContent = khopNote.text + (khopNote.ok && khopNote.ngay ? ' ngày ' + khopNote.ngay : '');
+  }
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">' + (resultKhop.length ? 'Không có mã nào khớp ô tìm.' : 'Chưa có mã nào trong chứng từ khớp kho.') + '</td></tr>';
+    pager.innerHTML = ''; return;
+  }
+  var totalPages = Math.ceil(filtered.length/pageSize), start = (pageC-1)*pageSize;
+  tbody.innerHTML = filtered.slice(start, start+pageSize).map(function(x, i) {
+    var tag = x.vuaKhop ? '<span class="badge-green kc-tag">Vừa khớp</span>' : '<span class="type-tag kc-tag">Đã khớp từ trước</span>';
+    return '<tr><td>'+(start+i+1)+'</td>'+
+      '<td><span class="shop-tag">'+esc(x.gian||'—')+'</span></td>'+
+      '<td><span class="type-tag">'+esc(x.loai)+'</span></td>'+
+      '<td><code>'+esc(x.tid)+'</code>'+tag+'</td>'+
+      '<td>'+esc(x.ngayDoiSoat||'—')+'</td></tr>';
+  }).join('');
+  UI.renderPager(pager, pageC, totalPages, function(p){ pageC=p; renderTableC(); });
+}
+
+// Xuất đúng các mã đang hiện theo ô tìm; cùng bộ cột như bảng, cột mã khoá Text.
+function exportExcelC() {
+  var rows = KhopKho.filter(resultKhop, searchStrC);
+  if (!rows.length) { alert('Không có mã nào để xuất!'); return; }
+  UI.downloadWb(KhopKho.buildWorkbook(rows, 'shopee'), 'Shopee_da_khop_kho_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
 function switchTab(paneId, btn) {
   document.querySelectorAll('#pane_sp .tab-pane').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('#pane_sp .tab-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -335,10 +380,11 @@ function init() {
   var byKey = function (key) { var p = key.split(':'); return zoneArr(+p[0])[+p[1]]; };
   UI.bindFileFields(_$('list1'), byKey);
   UI.bindFileFields(_$('list2'), byKey);
+  KhoSync.onNote('sp', function (n) { khopNote = n; renderTableC(); });
   renderAll();
 }
 
-return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB,
+return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
          removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

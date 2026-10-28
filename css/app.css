@@ -407,3 +407,8 @@ details.skipped pre { margin: 10px 0 0; white-space: pre-wrap; word-break: break
 .ds-filters .file-field { color: var(--text-2); }
 @media (max-width: 900px) { .ds-filters { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 400px) { .ds-filters { grid-template-columns: 1fr; } }
+
+/* ---- Tab con "Đã khớp kho" ---- */
+.kc-note { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.kc-note:empty { display: none; }
+.kc-tag { margin-left: 6px; }

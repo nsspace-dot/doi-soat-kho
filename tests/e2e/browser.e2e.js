@@ -196,13 +196,28 @@ async function main() {
     assert.deepEqual(Object.keys(ls).sort(), ['chiTiet', 'hanhDong', 'thoiGian'], 'lịch sử không có tên người');
     assert.match(ls.chiTiet, /chuyển 2 mã sang Đã khớp/);
     await page.screenshot({ path: path.join(OUT, '4-shopee-ket-qua.png'), fullPage: true });
-    // Khối "Vừa khớp lần này"
-    assert.ok(await page.isVisible('#sp_vkCard'));
-    assert.equal(await page.textContent('#sp_vkCount'), '(2 mã)');
-    assert.equal(await page.textContent('#sp_vkNote'), 'Đã chuyển sang Đã khớp');
-    assert.equal(await page.locator('#sp_vkBody tr').count(), 2);
-    assert.match(await page.locator('#sp_vkBody').innerText(), /862330000001\s+Shop A\s+Đơn hàng\s+\d{2}\/\d{2}\/\d{4}/);
-    step('Shopee: xác nhận "Sẽ chuyển N mã sang Đã khớp", mã khớp chuyển trạng thái (không xoá), nhãn gian/loại, khối Vừa khớp, lịch sử không tên');
+    // Tab con "Đã khớp kho (N)" thay cho khối "Vừa khớp lần này" cũ
+    assert.equal(await page.locator('#sp_vkCard').count(), 0, 'đã bỏ khối Vừa khớp riêng');
+    assert.equal(await page.locator('#sp_btn-tabC').innerText(), 'Đã khớp kho (2)');
+    await page.click('#sp_btn-tabC');
+    assert.deepEqual(await page.$$eval('#sp_tabC thead th', (t) => t.map((x) => x.textContent)), ['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn', 'Ngày đối soát']);
+    assert.equal(await page.locator('#sp_tbodyC tr').count(), 2);
+    assert.match(await page.locator('#sp_tbodyC tr').first().innerText(), /^1\s+Shop A\s+Đơn hàng\s+862330000001\s*Vừa khớp\s+\d{2}\/\d{2}\/\d{4}$/);
+    assert.match(await page.textContent('#sp_kcNote'), /^Đã chuyển sang Đã khớp ngày \d{2}\/\d{2}\/\d{4}$/);
+    assert.match(await page.textContent('#sp_kcSummary'), /2 mã khớp kho: 2 vừa khớp lần này, 0 đã khớp từ trước/);
+    await page.fill('#sp_searchC', 'spxvn-0000');
+    assert.equal(await page.locator('#sp_tbodyC tr').count(), 1);
+    const exC = await readDownload(page, () => page.click('#sp_btnExportC'));
+    const exCws = exC.wb.Sheets[exC.wb.SheetNames[0]];
+    assert.deepEqual(XLSX.utils.sheet_to_json(exCws, { header: 1 }).map((r) => r.slice(0, 4)),
+      [['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn'], [1, 'Shop A', 'Đơn hàng', 'SPXVN00000004']], 'xuất theo ô tìm');
+    assert.equal(exCws.D2.z, '@');
+    await page.fill('#sp_searchC', 'khongco');
+    assert.match(await page.locator('#sp_tbodyC').innerText(), /Không có mã nào khớp ô tìm/);
+    await page.fill('#sp_searchC', '');
+    await page.screenshot({ path: path.join(OUT, '4b-shopee-da-khop-kho.png'), fullPage: false });
+    await page.click('#sp_btn-tabA');
+    step('Shopee: xác nhận "Sẽ chuyển N mã sang Đã khớp", mã khớp chuyển trạng thái (không xoá), tab con "Đã khớp kho (2)" có tìm, phân trang, xuất Excel theo ô tìm, lịch sử không tên');
 
     const exA = await readDownload(page, () => page.click('#sp_btnExportA'));
     const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1 });
@@ -222,7 +237,13 @@ async function main() {
     assert.equal(await page.textContent('#sp_sumMatched'), '2');
     assert.equal(await page.textContent('#sp_mRate'), '67%');
     assert.equal(row(ctl, '862330000001').join('|'), before1, 'không đổi ngày khớp, gian, loại file cũ');
-    assert.ok(!(await page.isVisible('#sp_vkCard')), 'không có mã nào vừa khớp');
+    assert.equal(await page.locator('#sp_btn-tabC').innerText(), 'Đã khớp kho (2)', 'mã đã khớp từ trước vẫn tính');
+    await page.click('#sp_btn-tabC');
+    assert.equal(await page.locator('#sp_tbodyC tr').count(), 2);
+    assert.equal(await page.locator('#sp_tbodyC .kc-tag', { hasText: 'Đã khớp từ trước' }).count(), 2);
+    assert.match(await page.locator('#sp_tbodyC').innerText(), /Shop A sửa tên/, 'gian theo nhãn file vừa gán');
+    assert.ok(!(await page.isVisible('#sp_kcNote')), 'không có mã nào vừa khớp');
+    await page.click('#sp_btn-tabA');
     step('Đối soát lại: mã đã khớp vẫn tính là khớp, không báo lỗi, không đổi ngày khớp / nhãn cũ');
 
     /* ---- Tab TikTok ---- */
@@ -247,6 +268,10 @@ async function main() {
     assert.deepEqual(cho(ctl), ['GYABC123', 'VNGH00000003'], 'GY bị lọc vẫn Chờ đối soát');
     assert.deepEqual(row(ctl, '862330000002').slice(3, 7), ['khop', 'tiktok', 'Gian Một', 'Giao KTC'], 'gian sửa tay đi theo mã');
     assert.equal(await page.textContent('#tt_mFiltered'), '1');
+    assert.equal(await page.locator('#tt_btn-tabC').innerText(), 'Đã khớp kho (1)', 'GY bị lọc và mã không có trong kho không tính');
+    await page.click('#tt_btn-tabC');
+    assert.match(await page.locator('#tt_tbodyC').innerText(), /^1\s+Gian Một\s+Giao KTC\s+862330000002\s*Vừa khớp/);
+    await page.click('#tt_btn-tabA');
     step('TikTok: huỷ không đổi kho; ghi lại chỉ chuyển mã TikTok, GY bị lọc vẫn Chờ đối soát, gian sửa tay đi theo mã');
 
     const ttA = await readDownload(page, () => page.click('#tt_btnExportA'));
@@ -440,6 +465,15 @@ async function main() {
             return { got: ch.options.plugins.legend.labels.color, want: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() };
           }, t);
           assert.equal(chart.got.toLowerCase(), chart.want.toLowerCase(), name + ': màu nhãn biểu đồ theo theme');
+          // Tab con "Đã khớp kho" cũng đạt tương phản, không con vật / emoji ngoài quy định
+          await page.click('#' + t + '_btn-tabC');
+          const rc = await scanContrast(page);
+          assert.deepEqual(rc.fails, [], name + ' tab ' + t + ' / Đã khớp kho');
+          const tc = await visibleText(page);
+          if (chuDe !== 'meo') assert.ok(!ANIMALS.test(tc), name + ' Đã khớp kho: không con vật');
+          if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(tc), name + ' Đã khớp kho: không emoji');
+          assert.ok(!ANIMALS.test(await page.locator('#' + t + '_tabC table').innerText()), 'không con vật trong bảng');
+          await page.click('#' + t + '_btn-tabA');
         }
       }
       // Hộp xác nhận

@@ -104,7 +104,10 @@ Hai sàn đối soát **riêng**, cùng dùng một kho chung. Làm sàn nào tr
 2. Bấm **Tiến hành đối soát**. Trang đọc kho chung mới nhất rồi hiện kết quả, biểu đồ và bảng.
 3. Trang hỏi: **"Sẽ chuyển N mã sang Đã khớp. Đồng ý?"**
    - **Đồng ý**: các mã Chờ đối soát có trong chứng từ của sàn này chuyển sang **Đã khớp**, kèm sàn, gian hàng, loại file, ngày khớp.
-     Khối **"Vừa khớp lần này"** dưới các thẻ tổng kết liệt kê đúng các mã đó.
+     Tab con **"Đã khớp kho (N)"** (cạnh "Chưa về kho" và "Kho chưa có chứng từ") liệt kê mọi mã trong chứng từ vừa nạp
+     có trong kho, mỗi mã một lần: Gian hàng, Loại file (theo nhãn bạn gán ở danh sách file), Mã vận đơn, Ngày đối soát.
+     Mã vừa chuyển lần này có nhãn **Vừa khớp**, mã đã khớp từ những lần trước có nhãn **Đã khớp từ trước**.
+     Có ô **Tìm mã vận đơn…** và nút **Xuất Excel đã khớp kho** (xuất đúng các mã đang hiện theo ô tìm).
    - **Huỷ**: kho không đổi. Một dải vàng hiện nút **Chuyển N mã sang Đã khớp** để ghi lại sau.
 4. **Đối soát lại thoải mái**: nạp lại file có mã đã khớp thì mã đó vẫn tính là khớp trong thẻ tổng kết và tỷ lệ, không báo lỗi,
    và **không** đổi ngày khớp, gian hàng hay loại file cũ.
