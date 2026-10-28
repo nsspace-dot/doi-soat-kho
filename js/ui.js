@@ -90,21 +90,6 @@ var UI = (function () {
   function memGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function memDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
-  /* ---------- tên người thực hiện (nhớ lần trước) ---------- */
-  var NAME_KEY = 'doiSoat_tenNguoiTai';
-  function getName() { return (memGet(NAME_KEY) || '').trim(); }
-  function setName(v) { memSet(NAME_KEY, String(v || '').trim()); }
-  function ensureName() {
-    var n = getName();
-    if (n) return n;
-    var v = window.prompt('Nhập tên của bạn (ghi vào lịch sử kho chung):', '');
-    if (v === null || !v.trim()) return null;
-    setName(v.trim());
-    var inp = document.getElementById('kho_name');
-    if (inp) inp.value = v.trim();
-    return v.trim();
-  }
-
   function fmtIso(iso) {
     var d = new Date(iso);
     return isNaN(d.getTime()) ? String(iso || '') : Common.fmtDT(d);
@@ -123,7 +108,7 @@ var UI = (function () {
   return {
     toast: toast, choose: choose, confirm: confirmBox, alert: alertBox, renderPager: renderPager,
     setupDropZone: setupDropZone, memSet: memSet, memGet: memGet, memDel: memDel,
-    getName: getName, setName: setName, ensureName: ensureName, fmtIso: fmtIso,
+    fmtIso: fmtIso,
     downloadWb: downloadWb, guideHtml: guideHtml, esc: esc
   };
 })();

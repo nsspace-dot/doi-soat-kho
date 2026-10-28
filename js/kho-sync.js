@@ -62,11 +62,9 @@ var KhoSync = (function () {
   }
 
   function send(pfx, san, items) {
-    var nguoi = UI.ensureName();
-    if (!nguoi) return Promise.resolve(pending(pfx, san, items, 'Cần nhập tên người thực hiện để ghi lịch sử. Kho chung chưa thay đổi.'));
     banner(pfx, 'pending', 'Đang ghi kết quả vào kho chung…');
     var payload = items.map(function (it) { return { ma: it.ma, gian: it.gian, loai: it.loai }; });
-    return Api.reconcile(nguoi, san, payload).then(function (st) {
+    return Api.reconcile(san, payload).then(function (st) {
       Kho.apply(st);
       var k = st.ketQua || {};
       var x = k.khop !== undefined ? k.khop : items.length;

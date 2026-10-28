@@ -50,15 +50,15 @@ var Api = (function () {
   return {
     configured: configured,
     getState: function () { return request('GET'); },
-    upload: function (nguoi, cheDo, items, phienBan) {
-      return request('POST', { action: 'upload', nguoi: nguoi, cheDo: cheDo, items: items, phienBan: phienBan });
+    upload: function (cheDo, items, phienBan) {
+      return request('POST', { action: 'upload', cheDo: cheDo, items: items, phienBan: phienBan });
     },
     // khop: [{ ma, gian, loai }] — chuyển các mã này sang 'Đã khớp' (không xoá khỏi kho)
-    reconcile: function (nguoi, san, khop) {
-      return request('POST', { action: 'reconcile', nguoi: nguoi, san: san, khop: khop });
+    reconcile: function (san, khop) {
+      return request('POST', { action: 'reconcile', san: san, khop: khop });
     },
-    undo: function (nguoi, phienBan) {
-      return request('POST', { action: 'undo', nguoi: nguoi, phienBan: phienBan });
+    undo: function (phienBan) {
+      return request('POST', { action: 'undo', phienBan: phienBan });
     }
   };
 })();

@@ -97,13 +97,12 @@ async function main() {
 
     /* ---- Đã cấu hình ---- */
     page = await newPage(browser, port, true);
-    await page.locator('#st_lastWho', { hasText: 'Chưa ai tải' }).waitFor();
+    await page.locator('#st_lastTime', { hasText: 'Chưa có' }).waitFor();
     assert.equal(await page.textContent('#st_count'), '0');
     assert.match(await page.locator('#st_week').innerText(), /Chưa tải kho tuần này/);
     step('Kho trống: nhãn vàng "Chưa tải kho tuần này"');
 
     // Tab Kho: dán Zalo + file
-    await page.fill('#kho_name', 'Lan');
     await page.fill('#kho_input', [
       '[20/10/2026 09:15:02] Kho HN: mã hoàn',
       '[QR]: 862330000001', '[C128] 862330000002', '[QR]: SPXVN00000004', '[QR]: 862330000001', '[QR]: ABC', 'rác'
@@ -121,10 +120,10 @@ async function main() {
     assert.equal(await page.textContent('#kho_sUnique'), '4');
     await page.screenshot({ path: path.join(OUT, '1-kho-xem-truoc.png'), fullPage: true });
     await page.click('#kho_btnSave');
-    await page.locator('#st_lastWho', { hasText: 'Lan' }).waitFor();
+    await page.locator('#st_lastTime', { hasText: /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/ }).waitFor();
     assert.equal(await page.textContent('#st_count'), '4');
+    assert.equal(await page.textContent('#st_lastSub'), '4 mã trong kho');
     assert.match(await page.locator('#st_week').innerText(), /Đã có người tải kho/);
-    assert.match(await page.textContent('#st_lastWhen'), /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} · 4 mã$/);
     assert.equal(await page.textContent('#st_old'), '0');
     assert.ok(!(await page.locator('#st_oldCard.is-warn').count()));
     assert.ok(await page.locator('#kho_step2.is-idle').count(), 'lưu xong thì bước 2 về trạng thái chờ');
@@ -189,7 +188,8 @@ async function main() {
     assert.ok(!(await page.locator('#sp_sumOldCard.is-warn').count()));
     const ls = ctl.gas.get().lichSu[0];
     assert.equal(ls.hanhDong, 'Đối soát Shopee');
-    assert.equal(ls.nguoi, 'Lan');
+    assert.deepEqual(Object.keys(ls).sort(), ['chiTiet', 'hanhDong', 'thoiGian'], 'lịch sử không có tên người');
+    assert.match(ls.chiTiet, /chuyển 2 mã sang Đã khớp/);
     await page.screenshot({ path: path.join(OUT, '4-shopee-ket-qua.png'), fullPage: true });
     step('Shopee: đọc kho chung, xác nhận, chỉ xoá 2 mã Shopee đã khớp, ghi lịch sử');
 
@@ -253,7 +253,7 @@ async function main() {
     assert.ok(await page.isVisible('#platBtn_kho .tab-ico'), 'Mèo con: tab có con vật');
     assert.match(await page.locator('#toast').innerText(), /^Xong rồi nè 🐻 /, 'Mèo con: thông báo thành công có con vật');
     // Thẻ "Tồn từ 7 ngày" tô cảnh báo khi có mã cũ
-    ctl.gas.post({ action: 'upload', cheDo: 'gop', nguoi: 'Cũ', items: [{ ma: 'CU0000000001', ngay: '01/10/2026' }] });
+    ctl.gas.post({ action: 'upload', cheDo: 'gop', items: [{ ma: 'CU0000000001', ngay: '01/10/2026' }] });
     await page.click('#st_refresh');
     await page.locator('#st_oldCard.is-warn').waitFor();
     assert.equal(await page.textContent('#st_old'), '1');

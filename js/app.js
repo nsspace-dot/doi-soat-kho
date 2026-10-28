@@ -40,7 +40,7 @@ var App = (function () {
     if (!Api.configured() || Kho.status !== 'ok') {
       var text = Kho.status === 'loading' || Kho.status === 'idle' ? 'Đang tải…' : '—';
       setStat('count', text, ''); setStat('old', '—', '');
-      $('st_lastWho').textContent = '—'; $('st_lastWhen').textContent = ' ';
+      $('st_lastTime').textContent = '—'; $('st_lastSub').textContent = '\u00a0';
       $('st_week').innerHTML = '<span class="stat-sub">—</span>';
       if (!Api.configured()) msg.innerHTML = '<div class="guide-box">' + UI.guideHtml() + '</div>';
       else if (Kho.status === 'error') msg.innerHTML = '<div class="err-box"><span><b>Không đọc được kho chung:</b> ' + esc(Kho.error && Kho.error.message) + '</span>' +
@@ -55,15 +55,10 @@ var App = (function () {
     setStat('count', fmtNum(info.soCho), 'chờ đối soát · ' + fmtNum(info.soKhop) + ' mã đã khớp');
     setStat('old', fmtNum(old), old ? 'cần truy gấp' : 'không có mã tồn lâu');
     $('st_oldCard').classList.toggle('is-warn', old > 0);
-    if (last) {
-      $('st_lastWho').textContent = last.nguoi;
-      $('st_lastWhen').textContent = UI.fmtIso(last.thoiGian) + ' · ' + fmtNum(last.soMa) + ' mã';
-      $('st_week').innerHTML = weekChip(Date.now() - new Date(last.thoiGian).getTime() <= WEEK_MS);
-    } else {
-      $('st_lastWho').textContent = 'Chưa ai tải';
-      $('st_lastWhen').textContent = ' ';
-      $('st_week').innerHTML = weekChip(false);
-    }
+    // "Tải lần cuối: dd/mm/yyyy hh:mm · N mã trong kho" — không có tên người.
+    $('st_lastTime').textContent = last ? UI.fmtIso(last.thoiGian) : 'Chưa có';
+    $('st_lastSub').textContent = fmtNum(info.soMa) + ' mã trong kho';
+    $('st_week').innerHTML = weekChip(!!last && Date.now() - new Date(last.thoiGian).getTime() <= WEEK_MS);
   }
 
   function refreshStatus() {

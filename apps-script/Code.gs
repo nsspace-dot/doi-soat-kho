@@ -13,7 +13,8 @@
      KHO        ma_sach | ma_goc | ngay_doi_soat | trang_thai | san | gian_hang | loai_file | ngay_khop
      KHO_TRUOC  bản sao KHO trước lần ghi gần nhất (để Hoàn tác)
      THONG_TIN  khoa | gia_tri  (lần tải cuối, phiên bản, ...)
-     LICH_SU    thoi_gian | nguoi | hanh_dong | chi_tiet  (giữ ~500 dòng mới nhất)
+     LICH_SU    thoi_gian | hanh_dong | chi_tiet  (giữ ~500 dòng mới nhất)
+   Không đăng nhập, không ghi tên người: lịch sử chỉ có thời gian + hành động + số lượng.
 
    Hàm chạy tay trong trình soạn Apps Script:
      migrate()           chuyển kho cũ sang mô hình trạng thái (cũng tự chạy ở lần gọi đầu)
@@ -31,12 +32,12 @@ var KHO_HEADER = ['ma_sach', 'ma_goc', 'ngay_doi_soat', 'trang_thai', 'san', 'gi
 var C = { MA: 0, GOC: 1, NGAY: 2, TT: 3, SAN: 4, GIAN: 5, LOAI: 6, NGAY_KHOP: 7 };
 var CHO = 'cho', KHOP = 'khop';
 var INFO_HEADER = ['khoa', 'gia_tri'];
-var LS_HEADER = ['thoi_gian', 'nguoi', 'hanh_dong', 'chi_tiet'];
+var LS_HEADER = ['thoi_gian', 'hanh_dong', 'chi_tiet'];
+var INFO_BO = ['nguoi_tai_cuoi', 'nguoi_ghi_cuoi'];   // khoá cũ có tên người -> bỏ
 var LIMITS = {
   BODY_CHARS: 4000000,   // ~4 MB JSON
   ITEMS: 20000,          // số mã tối đa mỗi lần tải / mỗi lần đối soát
   KHO_ROWS: 60000,       // số mã tối đa trong kho
-  NAME: 40,
   GIAN: 60,
   LICH_SU: 500,
   LICH_SU_TRA_VE: 30,
@@ -117,12 +118,6 @@ function cleanCode_(v) {
 
 function cleanText_(v, max) {
   return String(v === null || v === undefined ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
-}
-
-function validName_(v) {
-  var s = cleanText_(v, LIMITS.NAME);
-  if (!s) throw userError_('NO_NAME', 'Thiếu tên người thực hiện.');
-  return s;
 }
 
 // Mã gốc chỉ để hiển thị; nếu lạ thì dùng mã sạch.
@@ -271,7 +266,6 @@ function migrateRows_(oldRows) {
 /* ============================ HÀNH ĐỘNG ============================ */
 
 function actionUpload_(body) {
-  var nguoi = validName_(body.nguoi);
   var mode = body.cheDo === 'thay' ? 'thay' : (body.cheDo === 'gop' ? 'gop' : null);
   if (!mode) throw userError_('BAD_MODE', 'Chế độ lưu phải là "gop" hoặc "thay".');
   var now = now_(), today = todayStr_(now), nowIso = now.toISOString();
@@ -285,20 +279,18 @@ function actionUpload_(body) {
   if (res.rows.length > LIMITS.KHO_ROWS) throw userError_('KHO_FULL', 'Kho vượt quá ' + LIMITS.KHO_ROWS + ' mã.');
 
   info.lan_tai_cuoi = nowIso;
-  info.nguoi_tai_cuoi = nguoi;
   info.so_ma_tai_cuoi = String(s.items.length);
   var detail = (mode === 'thay' ? 'Thay thế phần Chờ đối soát' : 'Gộp vào kho') + ': gửi ' + s.items.length + ' mã, thêm mới ' + res.added +
     ', đã có ' + res.existed + (mode === 'thay' ? ', bỏ ' + res.removed : '') +
     (res.daKhop.length ? ', bỏ qua ' + res.daKhop.length + ' mã đã khớp trước đó' : '') +
     (s.rejected ? ', loại ' + s.rejected + ' mã sai' : '') + '. Kho còn ' + res.rows.length + ' mã.';
-  commit_(info, before, res.rows, nguoi, mode === 'thay' ? 'Tải kho (thay thế)' : 'Tải kho (gộp)', detail, now);
+  commit_(info, before, res.rows, mode === 'thay' ? 'Tải kho (thay thế)' : 'Tải kho (gộp)', detail, now);
   var st = readState_();
   st.ketQua = { them: res.added, daCo: res.existed, bo: res.removed, daKhop: res.daKhop.length, loai: s.rejected };
   return st;
 }
 
 function actionReconcile_(body) {
-  var nguoi = validName_(body.nguoi);
   var sanKey = body.san;
   if (!SAN[sanKey]) throw userError_('BAD_SAN', 'Sàn không hợp lệ.');
   if (body.xoa !== undefined) throw userError_('OLD_CLIENT', 'Trang đang mở là bản cũ. Hãy tải lại trang (Ctrl+F5) rồi đối soát lại.');
@@ -318,10 +310,10 @@ function actionReconcile_(body) {
     (res.already ? ', ' + res.already + ' mã đã khớp từ trước giữ nguyên' : '') +
     (res.notInKho ? ', ' + res.notInKho + ' mã không có trong kho' : '') + ').';
   if (res.changed.length) {
-    commit_(info, before, res.rows, nguoi, 'Đối soát ' + SAN[sanKey], detail, now);
+    commit_(info, before, res.rows, 'Đối soát ' + SAN[sanKey], detail, now);
   } else {
     // Kho không đổi -> không ghi đè bản Hoàn tác, chỉ ghi lịch sử.
-    addHistory_(now, nguoi, 'Đối soát ' + SAN[sanKey], detail);
+    addHistory_(now, 'Đối soát ' + SAN[sanKey], detail);
   }
   var st = readState_();
   st.ketQua = { khop: res.changed.length, daKhop: res.already, khongCo: res.notInKho, gui: khop.length, ngayKhop: today };
@@ -329,7 +321,6 @@ function actionReconcile_(body) {
 }
 
 function actionUndo_(body) {
-  var nguoi = validName_(body.nguoi);
   var info = readInfo_();
   if (info.co_ban_truoc !== '1') throw userError_('NO_UNDO', 'Không có bản trước để hoàn tác.');
   checkVersion_(info, body.phienBan);
@@ -342,11 +333,11 @@ function actionUndo_(body) {
   // Hoán đổi cả 8 cột (gồm trạng thái, sàn, gian, loại file, ngày khớp).
   writeKho_(SHEET_KHO_TRUOC, cur);
   writeKho_(SHEET_KHO, prev);
-  ['lan_tai_cuoi', 'nguoi_tai_cuoi', 'so_ma_tai_cuoi'].forEach(function (k) { info[k] = prevInfo[k] || ''; });
+  ['lan_tai_cuoi', 'so_ma_tai_cuoi'].forEach(function (k) { info[k] = prevInfo[k] || ''; });
   info.ban_truoc_thong_tin = JSON.stringify(curUpload);
-  bumpWrite_(info, nguoi, 'Hoàn tác', now);
+  bumpWrite_(info, 'Hoàn tác', now);
   writeInfo_(info);
-  addHistory_(now, nguoi, 'Hoàn tác', 'Đưa kho về bản trước lần ghi gần nhất: ' + cur.length + ' -> ' + prev.length +
+  addHistory_(now, 'Hoàn tác', 'Đưa kho về bản trước lần ghi gần nhất: ' + cur.length + ' -> ' + prev.length +
     ' mã. Bấm Hoàn tác lần nữa để làm lại.');
   var st = readState_();
   st.ketQua = { truoc: cur.length, sau: prev.length };
@@ -369,7 +360,7 @@ function donKho() {
     var before = readKho_(SHEET_KHO);
     var res = cleanupKho_(before, today, GIU_NGAY);
     if (res.cho + res.khop) {
-      commit_(info, before, res.rows, 'Tự động', 'Dọn kho', 'Dọn mã quá ' + GIU_NGAY + ' ngày: xoá ' + res.cho +
+      commit_(info, before, res.rows, 'Dọn kho', 'Dọn mã quá ' + GIU_NGAY + ' ngày: xoá ' + res.cho +
         ' mã Chờ đối soát, ' + res.khop + ' mã Đã khớp. Kho còn ' + res.rows.length + ' mã.', now);
     }
     return { ok: true, cho: res.cho, khop: res.khop, conLai: res.rows.length };
@@ -394,26 +385,25 @@ function checkVersion_(info, phienBan) {
 }
 
 function uploadInfo_(info) {
-  return { lan_tai_cuoi: info.lan_tai_cuoi || '', nguoi_tai_cuoi: info.nguoi_tai_cuoi || '', so_ma_tai_cuoi: info.so_ma_tai_cuoi || '' };
+  return { lan_tai_cuoi: info.lan_tai_cuoi || '', so_ma_tai_cuoi: info.so_ma_tai_cuoi || '' };
 }
 
-function bumpWrite_(info, nguoi, hanhDong, now) {
+function bumpWrite_(info, hanhDong, now) {
   info.phien_ban = String((parseInt(info.phien_ban, 10) || 0) + 1);
   info.ghi_cuoi = now.toISOString();
-  info.nguoi_ghi_cuoi = nguoi;
   info.hanh_dong_cuoi = hanhDong;
 }
 
 // Lưu bản sao trước khi ghi (để Hoàn tác) rồi ghi kho mới + thông tin + lịch sử.
 // info.__goc là thông tin lần tải cuối lúc vừa đọc (trước khi hành động sửa info).
-function commit_(info, before, after, nguoi, hanhDong, detail, now) {
+function commit_(info, before, after, hanhDong, detail, now) {
   writeKho_(SHEET_KHO_TRUOC, before);
   info.ban_truoc_thong_tin = JSON.stringify(info.__goc);
   info.co_ban_truoc = '1';
   writeKho_(SHEET_KHO, after);
-  bumpWrite_(info, nguoi, hanhDong, now);
+  bumpWrite_(info, hanhDong, now);
   writeInfo_(info);
-  addHistory_(now, nguoi, hanhDong, detail);
+  addHistory_(now, hanhDong, detail);
 }
 
 /* ============================ SHEET I/O ============================ */
@@ -452,8 +442,28 @@ function migrateSheet_(name) {
 function ensureModel_() {
   var n = migrateSheet_(SHEET_KHO);
   migrateSheet_(SHEET_KHO_TRUOC);
-  if (n) addHistory_(now_(), 'Tự động', 'Chuyển đổi dữ liệu', 'Chuyển kho sang mô hình trạng thái: ' + n + ' mã -> Chờ đối soát, giữ nguyên ngày đối soát.');
+  migrateHistory_();
+  if (n) addHistory_(now_(), 'Chuyển đổi dữ liệu', 'Chuyển kho sang mô hình trạng thái: ' + n + ' mã -> Chờ đối soát, giữ nguyên ngày đối soát.');
   return { ok: true, daChuyen: n };
+}
+
+/* Lịch sử kiểu cũ (thoi_gian | nguoi | hanh_dong | chi_tiet) -> bỏ cột người.
+   Đã đúng cấu trúc thì không làm gì.                                        */
+function migrateHistory_() {
+  var sh = ss_().getSheetByName(SHEET_LS);
+  if (!sh) return 0;
+  var head = sh.getRange(1, 1, 1, 4).getDisplayValues()[0];
+  if (head[1] !== 'nguoi') return 0;
+  var last = sh.getLastRow();
+  var old = last >= 2 ? sh.getRange(2, 1, last - 1, 4).getDisplayValues() : [];
+  sh.getRange(1, 1, Math.max(last, 1), 4).clearContent();
+  sh.getRange(1, 1, 1, LS_HEADER.length).setValues([LS_HEADER]);
+  if (old.length) {
+    var rg = sh.getRange(2, 1, old.length, LS_HEADER.length);
+    rg.setNumberFormat('@');
+    rg.setValues(old.map(function (r) { return [r[0], r[2], r[3]]; }));
+  }
+  return old.length;
 }
 
 function readKho_(name) {
@@ -489,7 +499,9 @@ function writeKho_(name, rows) {
 function readInfo_() {
   var sh = sheet_(SHEET_INFO, INFO_HEADER);
   var last = sh.getLastRow(), info = {};
-  if (last >= 2) sh.getRange(2, 1, last - 1, 2).getDisplayValues().forEach(function (r) { if (r[0]) info[r[0]] = String(r[1]); });
+  if (last >= 2) sh.getRange(2, 1, last - 1, 2).getDisplayValues().forEach(function (r) {
+    if (r[0] && INFO_BO.indexOf(r[0]) < 0) info[r[0]] = String(r[1]);
+  });
   info.__goc = uploadInfo_(info);
   return info;
 }
@@ -505,12 +517,12 @@ function writeInfo_(info) {
   rg.setValues(keys.map(function (k) { return [k, info[k]]; }));
 }
 
-function addHistory_(now, nguoi, hanhDong, detail) {
+function addHistory_(now, hanhDong, detail) {
   var sh = sheet_(SHEET_LS, LS_HEADER);
   var last = sh.getLastRow();
   var rg = sh.getRange(last + 1, 1, 1, LS_HEADER.length);
   rg.setNumberFormat('@');
-  rg.setValues([[now.toISOString(), nguoi, hanhDong, detail]]);
+  rg.setValues([[now.toISOString(), hanhDong, detail]]);
   var count = last;   // số dòng dữ liệu sau khi thêm = (last + 1) - 1
   if (count > LIMITS.LICH_SU) sh.deleteRows(2, count - LIMITS.LICH_SU);
 }
@@ -521,7 +533,7 @@ function readHistory_(n) {
   if (last < 2) return [];
   var from = Math.max(2, last - n + 1);
   return sh.getRange(from, 1, last - from + 1, LS_HEADER.length).getDisplayValues().reverse()
-    .map(function (r) { return { thoiGian: r[0], nguoi: r[1], hanhDong: r[2], chiTiet: r[3] }; });
+    .map(function (r) { return { thoiGian: r[0], hanhDong: r[1], chiTiet: r[2] }; });
 }
 
 function readState_() {
@@ -538,8 +550,8 @@ function readState_() {
       soCho: kho.length - soKhop,
       soKhop: soKhop,
       giuNgay: GIU_NGAY,
-      lanTaiCuoi: info.lan_tai_cuoi ? { thoiGian: info.lan_tai_cuoi, nguoi: info.nguoi_tai_cuoi || '', soMa: +info.so_ma_tai_cuoi || 0 } : null,
-      ghiCuoi: info.ghi_cuoi ? { thoiGian: info.ghi_cuoi, nguoi: info.nguoi_ghi_cuoi || '', hanhDong: info.hanh_dong_cuoi || '' } : null,
+      lanTaiCuoi: info.lan_tai_cuoi ? { thoiGian: info.lan_tai_cuoi, soMa: +info.so_ma_tai_cuoi || 0 } : null,
+      ghiCuoi: info.ghi_cuoi ? { thoiGian: info.ghi_cuoi, hanhDong: info.hanh_dong_cuoi || '' } : null,
       coBanTruoc: info.co_ban_truoc === '1'
     },
     lichSu: readHistory_(LIMITS.LICH_SU_TRA_VE)

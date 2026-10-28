@@ -46,7 +46,7 @@
     </div>
     <div class="stat-grid">
       <div class="stat-card" id="st_countCard"><div class="stat-label">Mã trong kho</div><div class="stat-value" id="st_count">—</div><div class="stat-sub" id="st_countSub">&nbsp;</div></div>
-      <div class="stat-card" id="st_lastCard"><div class="stat-label">Tải lần cuối</div><div class="stat-value sm" id="st_lastWho">—</div><div class="stat-sub" id="st_lastWhen">&nbsp;</div></div>
+      <div class="stat-card" id="st_lastCard"><div class="stat-label">Tải lần cuối</div><div class="stat-value sm" id="st_lastTime">—</div><div class="stat-sub" id="st_lastSub">&nbsp;</div></div>
       <div class="stat-card" id="st_oldCard"><div class="stat-label">Tồn từ 7 ngày trở lên</div><div class="stat-value" id="st_old">—</div><div class="stat-sub" id="st_oldSub">&nbsp;</div></div>
       <div class="stat-card" id="st_weekCard"><div class="stat-label">Tuần này</div><div id="st_week"><span class="stat-sub">—</span></div></div>
     </div>
@@ -61,11 +61,6 @@
 <div class="container">
   <section class="card step" id="kho_step1">
     <div class="step-head"><span class="step-num">1</span><h2 class="card-h">Nhập mã kho <span class="animal" aria-hidden="true">🐾</span></h2></div>
-    <div class="field-row">
-      <label class="field-label" for="kho_name">Tên người tải</label>
-      <input type="text" class="text-input" id="kho_name" maxlength="40" placeholder="VD: Lan kho HN" autocomplete="name">
-      <span class="field-note">Trình duyệt này nhớ tên cho lần sau.</span>
-    </div>
     <div class="kho-input-grid">
       <div>
         <label class="col-label" for="kho_input">Dán tin nhắn Zalo</label>
@@ -85,7 +80,7 @@
     <details class="help">
       <summary><span aria-hidden="true">ⓘ</span> Định dạng được hỗ trợ</summary>
       <div class="help-body">
-        <p><b>Tin nhắn Zalo:</b> dòng <code>[Ký hiệu]: mã</code> hoặc <code>[Ký hiệu] mã</code>, khối CSV dán nguyên (<code>"QR","mã","timestamp","ngày"</code>), dòng tiêu đề <code>[dd/mm/yyyy hh:mm:ss] Tên: ...</code> để lấy người gửi. Mã trùng tự gộp.</p>
+        <p><b>Tin nhắn Zalo:</b> dòng <code>[Ký hiệu]: mã</code> hoặc <code>[Ký hiệu] mã</code>, khối CSV dán nguyên (<code>"QR","mã","timestamp","ngày"</code>), dòng tiêu đề Zalo <code>[dd/mm/yyyy hh:mm:ss] Tên: ...</code> (bỏ qua, không lưu). Mã trùng tự gộp.</p>
         <p><b>File:</b> Excel / CSV quét mã vạch, file Sổ mã cũ, file Kho chung đã tải về. Nhận diện cột <b>Mã vận đơn</b>, <b>Code</b>, <b>Tracking ID</b>.</p>
         <p><b>Ngày đối soát:</b> mã mới vào kho nhận ngày tải lên (không dùng ngày quét trong tin nhắn). File Sổ mã / kho cũ có cột <b>Ngày đối soát</b> và <b>Số ngày tồn</b> thì giữ nguyên ngày cũ, để chuyển Sổ mã sang kho chung không mất tuổi tồn.</p>
       </div>
@@ -124,7 +119,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th style="width:50px">STT</th><th>Mã vận đơn</th><th>Nguồn</th><th>Người gửi</th><th>Ngày đối soát</th><th>Trạng thái</th><th style="width:44px"><span class="sr-only">Xoá</span></th></tr>
+            <tr><th style="width:50px">STT</th><th>Mã vận đơn</th><th>Nguồn</th><th>Ngày đối soát</th><th>Trạng thái</th><th style="width:44px"><span class="sr-only">Xoá</span></th></tr>
           </thead>
           <tbody id="kho_tbody"></tbody>
         </table>
@@ -162,7 +157,7 @@
     </div>
     <div class="table-wrap">
       <table class="history">
-        <thead><tr><th>Thời gian</th><th>Người</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+        <thead><tr><th>Thời gian</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
         <tbody id="kho_history"></tbody>
       </table>
     </div>

@@ -3,8 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createGas } = require('./gas-mock.js');
 
-const up = (items, extra) => Object.assign({ action: 'upload', cheDo: 'gop', nguoi: 'Lan', items }, extra);
-const rec = (san, khop, extra) => Object.assign({ action: 'reconcile', san, nguoi: 'Lan', khop }, extra);
+const up = (items, extra) => Object.assign({ action: 'upload', cheDo: 'gop', items }, extra);
+const rec = (san, khop, extra) => Object.assign({ action: 'reconcile', san, khop }, extra);
 const k = (ma, gian, loai) => ({ ma, gian: gian || 'Gian A', loai: loai || 'Giao KTC' });
 const codesOf = (st) => st.kho.map((r) => r[0]).sort();
 const byCode = (st) => Object.fromEntries(st.kho.map((r) => [r[0], r]));
@@ -66,7 +66,7 @@ test('Đối soát: chuyển sang "khop" + ghi sàn/gian/loại/ngày khớp, KH
   assert.equal(st.lichSu[0].hanhDong, 'Đối soát Shopee');
   assert.match(st.lichSu[0].chiTiet, /chuyển 1 mã sang Đã khớp/);
   assert.equal(g.post(rec('lazada', [])).loi, 'BAD_SAN');
-  assert.equal(g.post({ action: 'reconcile', san: 'shopee', nguoi: 'Lan', xoa: ['862330000002'] }).loi, 'OLD_CLIENT', 'trang cũ gửi "xoa" bị chặn');
+  assert.equal(g.post({ action: 'reconcile', san: 'shopee', xoa: ['862330000002'] }).loi, 'OLD_CLIENT', 'trang cũ gửi "xoa" bị chặn');
   assert.equal(status(g.get())['862330000002'], 'cho');
 });
 
@@ -121,7 +121,7 @@ test('Đối soát không đổi mã nào: không ghi đè bản Hoàn tác', ()
   g.post(up([{ ma: 'AAAA1111' }]));
   g.post(up([{ ma: 'BBBB2222' }]));
   const st = g.post(rec('tiktok', [k('ZZZZ9999')]));
-  const u = g.post({ action: 'undo', nguoi: 'Hoa', phienBan: st.info.phienBan });
+  const u = g.post({ action: 'undo', phienBan: st.info.phienBan });
   assert.deepEqual(codesOf(u), ['AAAA1111']);
 });
 
@@ -130,13 +130,13 @@ test('Hoàn tác khôi phục cả trạng thái và nhãn; bấm lần nữa đ
   g.post(up([{ ma: 'AAAA1111' }, { ma: 'BBBB2222' }]));
   const s2 = g.post(rec('tiktok', [k('AAAA1111', 'Gian T', 'Trả hàng')]));
   assert.equal(status(s2).AAAA1111, 'khop');
-  const u1 = g.post({ action: 'undo', nguoi: 'Hoa', phienBan: s2.info.phienBan });
+  const u1 = g.post({ action: 'undo', phienBan: s2.info.phienBan });
   assert.equal(u1.ok, true, u1.thongBao);
   assert.deepEqual(byCode(u1).AAAA1111.slice(3), ['cho', '', '', '', '']);
-  const u2 = g.post({ action: 'undo', nguoi: 'Hoa', phienBan: u1.info.phienBan });
+  const u2 = g.post({ action: 'undo', phienBan: u1.info.phienBan });
   assert.deepEqual(byCode(u2).AAAA1111.slice(3), ['khop', 'tiktok', 'Gian T', 'Trả hàng', '27/10/2026']);
-  assert.equal(g.post({ action: 'undo', nguoi: 'Lan', phienBan: '999' }).loi, 'STALE');
-  assert.equal(createGas().post({ action: 'undo', nguoi: 'Lan', phienBan: '0' }).loi, 'NO_UNDO');
+  assert.equal(g.post({ action: 'undo', phienBan: '999' }).loi, 'STALE');
+  assert.equal(createGas().post({ action: 'undo', phienBan: '0' }).loi, 'NO_UNDO');
 });
 
 test('Dọn kho: "cho" quá 60 ngày từ ngày đối soát, "khop" quá 60 ngày từ ngày khớp', () => {
@@ -166,7 +166,7 @@ test('Dọn kho: "cho" quá 60 ngày từ ngày đối soát, "khop" quá 60 ng�
   assert.equal(st.lichSu[0].hanhDong, 'Dọn kho');
   assert.match(st.lichSu[0].chiTiet, /xoá 0 mã Chờ đối soát, 1 mã Đã khớp/);
   // Dọn xong vẫn hoàn tác được
-  const u = g.post({ action: 'undo', nguoi: 'Lan', phienBan: st.info.phienBan });
+  const u = g.post({ action: 'undo', phienBan: st.info.phienBan });
   assert.deepEqual(codesOf(u), ['CHO0000002', 'KHOP000001', 'KHOP000002']);
   g.state.lockFree = false;
   assert.throws(() => g.ctx.donKho(), /đang ghi kho/);
@@ -228,11 +228,10 @@ test('Kho lớn (12.000 mã): ghi theo lô ≤ 2.000 dòng mỗi lần', () => {
   assert.ok(g.sheets.KHO_TRUOC.maxRowsPerWrite <= 2000);
 });
 
-test('Kiểm tra đầu vào: JSON hỏng, thiếu tên, quá lớn, hành động lạ, khoá bận', () => {
+test('Kiểm tra đầu vào: JSON hỏng, quá lớn, hành động lạ, khoá bận', () => {
   const g = createGas();
   assert.equal(g.post('{không phải json').loi, 'BAD_JSON');
   assert.equal(g.post('[1,2]').loi, 'BAD_JSON');
-  assert.equal(g.post(up([{ ma: 'AAAA1111' }], { nguoi: '   ' })).loi, 'NO_NAME');
   assert.equal(g.post(up([{ ma: 'AAAA1111' }], { cheDo: 'xoa_het' })).loi, 'BAD_MODE');
   assert.equal(g.post(up('AAAA1111')).loi, 'BAD_ITEMS');
   assert.equal(g.post(up([{ ma: '!!' }])).loi, 'NO_ITEMS');
@@ -253,4 +252,36 @@ test('Lịch sử chỉ giữ 500 dòng gần nhất, GET trả 30 dòng mới n
   for (let i = 0; i < 510; i++) g.post(rec('tiktok', [k('ZZZZ' + String(i).padStart(4, '0'))]));
   assert.equal(g.sheets.LICH_SU.getLastRow() - 1, 500);
   assert.equal(g.get().lichSu.length, 30);
+});
+
+test('Không còn chỗ nào lưu / trả tên người: lịch sử 3 cột, thông tin không có khoá tên', () => {
+  const g = createGas();
+  g.post(up([{ ma: 'AAAA1111' }], { nguoi: 'Lan' }));            // trang cũ gửi kèm tên: bỏ qua
+  g.post(rec('shopee', [k('AAAA1111')], { nguoi: 'Lan' }));
+  const st = g.get();
+  assert.deepEqual(g.sheets.LICH_SU.data[0], ['thoi_gian', 'hanh_dong', 'chi_tiet']);
+  assert.deepEqual(Object.keys(st.lichSu[0]).sort(), ['chiTiet', 'hanhDong', 'thoiGian']);
+  assert.deepEqual(Object.keys(st.info.lanTaiCuoi).sort(), ['soMa', 'thoiGian']);
+  assert.deepEqual(Object.keys(st.info.ghiCuoi).sort(), ['hanhDong', 'thoiGian']);
+  const all = JSON.stringify(st) + JSON.stringify(Object.values(g.sheets).map((x) => x.data));
+  assert.ok(!all.includes('Lan') && !/nguoi/.test(all), 'không lưu tên người ở đâu cả');
+});
+
+test('Migrate lịch sử cũ có cột người: bỏ cột người, giữ thời gian / hành động / chi tiết; chạy lại an toàn', () => {
+  const g = createGas();
+  const ss = g.ctx.SpreadsheetApp.getActiveSpreadsheet();
+  const ls = ss.insertSheet('LICH_SU');
+  ls.getRange(1, 1, 1, 4).setValues([['thoi_gian', 'nguoi', 'hanh_dong', 'chi_tiet']]);
+  ls.getRange(2, 1, 1, 4).setNumberFormat('@');
+  ls.getRange(2, 1, 1, 4).setValues([['2026-10-20T01:00:00Z', 'Lan', 'Tải kho (gộp)', 'gửi 3 mã']]);
+  const info = ss.insertSheet('THONG_TIN');
+  info.getRange(1, 1, 3, 2).setNumberFormat('@');
+  info.getRange(1, 1, 3, 2).setValues([['khoa', 'gia_tri'], ['nguoi_tai_cuoi', 'Lan'], ['lan_tai_cuoi', '2026-10-20T01:00:00Z']]);
+  g.get(); g.get();
+  assert.deepEqual(g.sheets.LICH_SU.data.slice(0, 2).map((r) => r.slice(0, 3)),
+    [['thoi_gian', 'hanh_dong', 'chi_tiet'], ['2026-10-20T01:00:00Z', 'Tải kho (gộp)', 'gửi 3 mã']]);
+  g.post(up([{ ma: 'AAAA1111' }]));
+  const all = JSON.stringify(Object.values(g.sheets).map((x) => x.data));
+  assert.ok(!all.includes('Lan'), 'tên cũ đã được xoá khỏi Sheet');
+  assert.equal(g.get().info.lanTaiCuoi.soMa, 1);
 });

@@ -126,10 +126,9 @@ var KhoTab = (function () {
       return '<tr><td>' + (start + i + 1) + '</td>' +
         '<td><code>' + esc(r.code) + '</code></td>' +
         '<td><span class="type-tag">' + esc(r.symb) + '</span></td>' +
-        '<td>' + esc(r.sender || '—') + '</td>' +
         '<td>' + date + '</td><td>' + status + '</td>' +
         '<td><button class="del-btn" data-code="' + esc(r.code) + '" title="Xoá mã này">✕</button></td></tr>';
-    }).join('') : '<tr class="empty-row"><td colspan="7">Không có mã nào khớp tìm kiếm.</td></tr>';
+    }).join('') : '<tr class="empty-row"><td colspan="6">Không có mã nào khớp tìm kiếm.</td></tr>';
     UI.renderPager($('kho_pager'), page, totalPages, function (p) { page = p; render(); });
 
     setIdle('kho_step3', !valid.length);
@@ -143,9 +142,6 @@ var KhoTab = (function () {
   async function save() {
     if (saving) return;
     if (!Api.configured()) { UI.alert('Chưa cấu hình máy chủ kho chung', UI.guideHtml()); return; }
-    var nguoi = $('kho_name').value.trim();
-    if (!nguoi) { UI.toast('Nhập "Tên người tải" trước khi lưu'); $('kho_name').focus(); return; }
-    UI.setName(nguoi);
     var items = KhoInput.toUploadItems(sendable());
     if (!items.length) { UI.toast('Chưa có mã hợp lệ nào để lưu'); return; }
 
@@ -172,7 +168,7 @@ var KhoTab = (function () {
       }
       setSaving(true, 'Đang lưu…');
       var res;
-      try { res = await Api.upload(nguoi, cheDo, items, st.info.phienBan); }
+      try { res = await Api.upload(cheDo, items, st.info.phienBan); }
       catch (err) { UI.alert('Chưa lưu được vào kho chung', esc(err.message) + '<br><br>Danh sách mã của bạn vẫn còn trên trang, có thể bấm lưu lại.'); return; }
       Kho.apply(res);
       var k = res.ketQua || {};
@@ -231,14 +227,12 @@ var KhoTab = (function () {
     if (!info.coBanTruoc || !info.ghiCuoi) { UI.alert('Không có gì để hoàn tác', 'Kho chung chưa có lần ghi nào trước đó.'); return; }
     var g = info.ghiCuoi;
     var ok = await UI.confirm('Hoàn tác lần ghi gần nhất',
-      'Lần ghi gần nhất: <b>' + esc(g.hanhDong) + '</b> bởi <b>' + esc(g.nguoi) + '</b> lúc ' + esc(UI.fmtIso(g.thoiGian)) + '.<br>' +
+      'Lần ghi gần nhất: <b>' + esc(g.hanhDong) + '</b> lúc ' + esc(UI.fmtIso(g.thoiGian)) + '.<br>' +
       'Kho chung (đang có ' + fmtNum(info.soMa) + ' mã) sẽ quay về trạng thái ngay trước lần ghi đó. Bấm Hoàn tác lần nữa để làm lại.',
       'Hoàn tác', true);
     if (!ok) return;
-    var nguoi = UI.ensureName();
-    if (!nguoi) return;
     try {
-      var res = await Api.undo(nguoi, info.phienBan);
+      var res = await Api.undo(info.phienBan);
       Kho.apply(res);
       UI.toast('Đã hoàn tác · kho còn ' + fmtNum(res.info.soMa) + ' mã', null, 'ok');
     } catch (err) { UI.alert('Chưa hoàn tác được', esc(err.message)); }
@@ -250,20 +244,19 @@ var KhoTab = (function () {
     $('kho_btnUndo').disabled = !(ok && st.info.coBanTruoc);
     var tb = $('kho_history');
     if (!ok) {
-      tb.innerHTML = '<tr class="empty-row"><td colspan="4">' + (Kho.status === 'loading' ? 'Đang tải…' : 'Chưa đọc được lịch sử kho chung.') + '</td></tr>';
+      tb.innerHTML = '<tr class="empty-row"><td colspan="3">' + (Kho.status === 'loading' ? 'Đang tải…' : 'Chưa đọc được lịch sử kho chung.') + '</td></tr>';
     } else if (!st.lichSu.length) {
-      tb.innerHTML = '<tr class="empty-row"><td colspan="4">Chưa có thao tác nào.</td></tr>';
+      tb.innerHTML = '<tr class="empty-row"><td colspan="3">Chưa có thao tác nào.</td></tr>';
     } else {
       tb.innerHTML = st.lichSu.map(function (h) {
-        return '<tr><td>' + esc(UI.fmtIso(h.thoiGian)) + '</td><td>' + esc(h.nguoi) + '</td><td><b>' + esc(h.hanhDong) + '</b></td><td>' + esc(h.chiTiet) + '</td></tr>';
+        return '<tr><td>' + esc(UI.fmtIso(h.thoiGian)) + '</td><td><b>' + esc(h.hanhDong) + '</b></td><td>' + esc(h.chiTiet) + '</td></tr>';
       }).join('');
     }
     render();
   }
 
   function init() {
-    $('kho_name').value = UI.getName();
-    $('kho_name').addEventListener('change', function () { UI.setName($('kho_name').value); });
+    UI.memDel('doiSoat_tenNguoiTai');   // bản trước có lưu tên người; không dùng nữa
     var draft = UI.memGet(DRAFT_KEY);
     if (draft) $('kho_input').value = draft;
     $('kho_input').addEventListener('input', function () { UI.memSet(DRAFT_KEY, $('kho_input').value); });
