@@ -50,14 +50,15 @@ var Api = (function () {
   return {
     configured: configured,
     getState: function () { return request('GET'); },
-    upload: function (nguoi, cheDo, items, phienBan) {
-      return request('POST', { action: 'upload', nguoi: nguoi, cheDo: cheDo, items: items, phienBan: phienBan });
+    upload: function (cheDo, items, phienBan) {
+      return request('POST', { action: 'upload', cheDo: cheDo, items: items, phienBan: phienBan });
     },
-    reconcile: function (nguoi, san, xoa) {
-      return request('POST', { action: 'reconcile', nguoi: nguoi, san: san, xoa: xoa });
+    // khop: [{ ma, gian, loai }] — chuyển các mã này sang 'Đã khớp' (không xoá khỏi kho)
+    reconcile: function (san, khop) {
+      return request('POST', { action: 'reconcile', san: san, khop: khop });
     },
-    undo: function (nguoi, phienBan) {
-      return request('POST', { action: 'undo', nguoi: nguoi, phienBan: phienBan });
+    undo: function (phienBan) {
+      return request('POST', { action: 'undo', phienBan: phienBan });
     }
   };
 })();
@@ -78,7 +79,9 @@ var Kho = (function () {
     });
   }
 
-  // [ma_sach, ma_goc, ngay_doi_soat, nguoi_tai, thoi_gian_tai] -> { c, id, d }
+  // Dòng kho: [ma_sach, ma_goc, ngay_doi_soat, trang_thai, san, gian_hang, loai_file, ngay_khop]
+  function rows() { return state && state.kho ? state.kho : []; }
+  // -> { c, id, d } cho thuật toán đối soát (mọi mã, cả 'cho' lẫn 'khop')
   function items() {
     return (state && state.kho ? state.kho : []).map(function (r) { return { c: r[0], id: r[1] || r[0], d: r[2] }; });
   }
@@ -89,7 +92,7 @@ var Kho = (function () {
   }
 
   return {
-    refresh: refresh, apply: apply, items: items, codeSet: codeSet,
+    refresh: refresh, apply: apply, rows: rows, items: items, codeSet: codeSet,
     onChange: function (fn) { listeners.push(fn); },
     get state() { return state; }, get status() { return status; }, get error() { return error; }
   };

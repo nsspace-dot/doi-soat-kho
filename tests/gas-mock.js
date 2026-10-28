@@ -14,6 +14,13 @@ class Sheet {
     }
     return 0;
   }
+  getLastColumn() {
+    let w = 0;
+    for (const r of this.data) for (let c = (r || []).length - 1; c >= 0; c--) {
+      if (r[c] !== '' && r[c] !== undefined && r[c] !== null) { w = Math.max(w, c + 1); break; }
+    }
+    return w;
+  }
   getRange(row, col, nr, nc) { return new Range(this, row, col, nr || 1, nc || 1); }
   setFrozenRows() {}
   deleteRows(start, n) { this.data.splice(start - 1, n); }
@@ -27,6 +34,8 @@ class Range {
   setNumberFormat(f) { this._cells((r, c) => { this.sh.fmt[r + ':' + c] = f; }); return this; }
   setValues(vals) {
     if (vals.length !== this.nr || vals.some((v) => v.length !== this.nc)) throw new Error('Kích thước không khớp');
+    this.sh.writes = (this.sh.writes || 0) + 1;
+    this.sh.maxRowsPerWrite = Math.max(this.sh.maxRowsPerWrite || 0, vals.length);
     this._cells((r, c, i, j) => {
       while (this.sh.data.length <= r) this.sh.data.push([]);
       let v = vals[i][j];
@@ -56,7 +65,7 @@ class Range {
 
 function createGas(opts) {
   const sheets = {};
-  const state = { lockFree: true, now: new Date('2026-10-27T03:00:00Z') };
+  const state = { lockFree: true, now: new Date('2026-10-27T03:00:00Z'), triggers: [] };
   const ss = {
     getSheetByName: (n) => sheets[n] || null,
     insertSheet: (n) => (sheets[n] = new Sheet(n))
@@ -64,6 +73,18 @@ function createGas(opts) {
   const ctx = {
     console,
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
+    ScriptApp: {
+      getProjectTriggers: () => state.triggers.slice(),
+      deleteTrigger: (t) => { state.triggers = state.triggers.filter((x) => x !== t); },
+      newTrigger: (fn) => {
+        const t = { fn, getHandlerFunction: () => fn };
+        const b = {
+          timeBased() { return b; }, everyDays(n) { t.everyDays = n; return b; }, atHour(h) { t.atHour = h; return b; },
+          inTimezone(z) { t.tz = z; return b; }, create() { state.triggers.push(t); return t; }
+        };
+        return b;
+      }
+    },
     LockService: { getScriptLock: () => ({ tryLock: () => state.lockFree, releaseLock: () => {} }) },
     ContentService: {
       MimeType: { JSON: 'application/json' },

@@ -71,18 +71,36 @@ var KhoTab = (function () {
     return rows.filter(function (r) { return r.code.indexOf(s) >= 0; });
   }
 
+  // Mã hợp lệ sẽ gửi lên: bỏ mã đã 'Đã khớp' trong kho (chống nạp trùng; server cũng bỏ qua).
+  function sendable() {
+    var st = Kho.status === 'ok' ? TrangThai.statusMap(Kho.rows()) : null;
+    return rows.filter(function (r) { var s = st && st.get(r.code); return r.valid && !(s && s.trangThai === TrangThai.KHOP); });
+  }
+
   function render() {
     if (!stats) return;
     var inKho = Kho.status === 'ok' ? Kho.codeSet() : null;
-    var valid = rows.filter(function (r) { return r.valid; });
+    var stMap = Kho.status === 'ok' ? TrangThai.statusMap(Kho.rows()) : new Map();
+    var khopRows = rows.filter(function (r) { var s = stMap.get(r.code); return r.valid && s && s.trangThai === TrangThai.KHOP; });
+    var valid = sendable();
     var newCount = inKho ? valid.filter(function (r) { return !inKho.has(r.code); }).length : null;
-    var invalid = rows.length - valid.length;
+    var invalid = rows.filter(function (r) { return !r.valid; }).length;
     $('kho_sTotal').textContent = fmtNum(stats.total);
     $('kho_sUnique').textContent = fmtNum(valid.length);
     $('kho_sDup').textContent = fmtNum(stats.dup);
     $('kho_sSkip').textContent = fmtNum(skipped.length + invalid);
     $('kho_sNew').textContent = newCount === null ? '—' : fmtNum(newCount);
     $('kho_sNewSub').textContent = newCount === null ? 'chưa đọc được kho chung' : 'chưa có trong kho chung';
+
+    // "N mã đã khớp trước đó (ngày …), bỏ qua"
+    var kb = $('kho_daKhopBox');
+    if (khopRows.length) {
+      var dates = [];
+      khopRows.forEach(function (r) { var d = stMap.get(r.code).ngayKhop; if (d && dates.indexOf(d) < 0) dates.push(d); });
+      kb.hidden = false;
+      kb.querySelector('span').textContent = fmtNum(khopRows.length) + ' mã đã khớp trước đó (ngày ' +
+        (dates.slice(0, 4).join(', ') || '—') + (dates.length > 4 ? ', …' : '') + '), bỏ qua — không đưa về Chờ đối soát.';
+    } else kb.hidden = true;
 
     var box = $('kho_skippedBox');
     if (skipped.length) {
@@ -100,33 +118,31 @@ var KhoTab = (function () {
     var today = Common.today();
     $('kho_tbody').innerHTML = data.length ? data.slice(start, start + pageSize).map(function (r, i) {
       var status, date;
+      var s = stMap.get(r.code);
       if (!r.valid) { status = '<span class="badge-red">Mã sai — sẽ bỏ qua</span>'; date = '—'; }
+      else if (s && s.trangThai === TrangThai.KHOP) { status = '<span class="badge-new">Đã khớp trước đó (' + esc(s.ngayKhop) + ') — bỏ qua</span>'; date = esc(s.ngayDoiSoat); }
       else if (inKho && inKho.has(r.code)) { status = '<span class="badge-amber">Đã có trong kho</span>'; date = esc(khoDates[r.code] || '') + ' (giữ ngày cũ)'; }
       else { status = '<span class="badge-green">Mới</span>'; date = esc(r.keepDate || today); }
       return '<tr><td>' + (start + i + 1) + '</td>' +
         '<td><code>' + esc(r.code) + '</code></td>' +
         '<td><span class="type-tag">' + esc(r.symb) + '</span></td>' +
-        '<td>' + esc(r.sender || '—') + '</td>' +
         '<td>' + date + '</td><td>' + status + '</td>' +
         '<td><button class="del-btn" data-code="' + esc(r.code) + '" title="Xoá mã này">✕</button></td></tr>';
-    }).join('') : '<tr class="empty-row"><td colspan="7">Không có mã nào khớp tìm kiếm.</td></tr>';
+    }).join('') : '<tr class="empty-row"><td colspan="6">Không có mã nào khớp tìm kiếm.</td></tr>';
     UI.renderPager($('kho_pager'), page, totalPages, function (p) { page = p; render(); });
 
     setIdle('kho_step3', !valid.length);
     $('kho_btnSave').disabled = saving || !valid.length;
     $('kho_saveHint').textContent = valid.length
       ? 'Sẽ gửi ' + fmtNum(valid.length) + ' mã hợp lệ' + (newCount !== null ? ' (' + fmtNum(newCount) + ' mã mới)' : '') + '. Mã mới nhận ngày đối soát hôm nay.'
-      : 'Chưa có mã hợp lệ nào.';
+      : (khopRows.length ? 'Mọi mã hợp lệ đều đã khớp trước đó, không có gì để lưu.' : 'Chưa có mã hợp lệ nào.');
   }
 
   /* ---------- lưu vào kho chung ---------- */
   async function save() {
     if (saving) return;
     if (!Api.configured()) { UI.alert('Chưa cấu hình máy chủ kho chung', UI.guideHtml()); return; }
-    var nguoi = $('kho_name').value.trim();
-    if (!nguoi) { UI.toast('Nhập "Tên người tải" trước khi lưu'); $('kho_name').focus(); return; }
-    UI.setName(nguoi);
-    var items = KhoInput.toUploadItems(rows);
+    var items = KhoInput.toUploadItems(sendable());
     if (!items.length) { UI.toast('Chưa có mã hợp lệ nào để lưu'); return; }
 
     setSaving(true, 'Đang đọc kho chung…');
@@ -134,30 +150,31 @@ var KhoTab = (function () {
       try { await Kho.refresh(); }
       catch (err) { UI.alert('Không đọc được kho chung', esc(err.message) + '<br><br>Chưa lưu gì. Danh sách mã của bạn vẫn còn trên trang.'); return; }
       var st = Kho.state, cheDo = 'gop';
-      if (st.info.soMa > 0) {
+      if (st.info.soCho > 0) {
         var inKho = Kho.codeSet();
         var dup = items.filter(function (it) { return inKho.has(it.ma); }).length;
         cheDo = await UI.choose('Kho chung đang có dữ liệu',
-          'Kho chung đang có <b>' + fmtNum(st.info.soMa) + '</b> mã. Bạn gửi <b>' + fmtNum(items.length) + '</b> mã (' +
+          'Kho chung đang có <b>' + fmtNum(st.info.soCho) + '</b> mã Chờ đối soát. Bạn gửi <b>' + fmtNum(items.length) + '</b> mã (' +
           fmtNum(items.length - dup) + ' mã mới, ' + fmtNum(dup) + ' mã đã có).<br><br>' +
           '<b>Gộp thêm vào kho</b>: thêm mã mới, mã đã có giữ ngày đối soát cũ.<br>' +
-          '<b>Thay thế kho</b>: kho chỉ còn đúng ' + fmtNum(items.length) + ' mã bạn gửi; ' + fmtNum(st.info.soMa - dup) + ' mã khác trong kho sẽ bị bỏ.',
+          '<b>Thay thế kho</b>: phần Chờ đối soát chỉ còn đúng ' + fmtNum(items.length) + ' mã bạn gửi; ' + fmtNum(Math.max(st.info.soCho - dup, 0)) + ' mã chờ khác sẽ bị bỏ. Mã Đã khớp giữ nguyên.',
           [{ label: 'Huỷ', value: null, kind: 'secondary' },
            { label: 'Thay thế kho', value: 'thay', kind: 'danger' },
            { label: 'Gộp thêm vào kho', value: 'gop', kind: 'primary', focus: true }]);
         if (!cheDo) return;
         if (cheDo === 'thay' && !(await UI.confirm('Xác nhận thay thế kho',
-          'Kho chung sẽ chỉ còn <b>' + fmtNum(items.length) + '</b> mã. <b>' + fmtNum(st.info.soMa - dup) + '</b> mã đang có sẽ bị bỏ khỏi kho. Có thể bấm "Hoàn tác" ngay sau đó nếu nhầm.',
+          'Phần Chờ đối soát sẽ chỉ còn <b>' + fmtNum(items.length) + '</b> mã. <b>' + fmtNum(Math.max(st.info.soCho - dup, 0)) + '</b> mã chờ đang có sẽ bị bỏ khỏi kho. Mã Đã khớp giữ nguyên. Có thể bấm "Hoàn tác" ngay sau đó nếu nhầm.',
           'Thay thế kho', true))) return;
       }
       setSaving(true, 'Đang lưu…');
       var res;
-      try { res = await Api.upload(nguoi, cheDo, items, st.info.phienBan); }
+      try { res = await Api.upload(cheDo, items, st.info.phienBan); }
       catch (err) { UI.alert('Chưa lưu được vào kho chung', esc(err.message) + '<br><br>Danh sách mã của bạn vẫn còn trên trang, có thể bấm lưu lại.'); return; }
       Kho.apply(res);
       var k = res.ketQua || {};
       UI.toast('Đã lưu vào kho chung: thêm ' + fmtNum(k.them || 0) + ' mã mới, ' + fmtNum(k.daCo || 0) + ' mã đã có' +
-        (k.bo ? ', bỏ ' + fmtNum(k.bo) + ' mã' : '') + ' · kho có ' + fmtNum(res.info.soMa) + ' mã', 7000, 'ok');
+        (k.bo ? ', bỏ ' + fmtNum(k.bo) + ' mã' : '') + (k.daKhop ? ', bỏ qua ' + fmtNum(k.daKhop) + ' mã đã khớp' : '') +
+        ' · kho có ' + fmtNum(res.info.soCho) + ' mã chờ đối soát', 7000, 'ok');
       clearAll();
     } finally {
       setSaving(false);
@@ -166,7 +183,7 @@ var KhoTab = (function () {
   function setSaving(on, label) {
     saving = on;
     var b = $('kho_btnSave');
-    b.disabled = on || !rows.some(function (r) { return r.valid; });
+    b.disabled = on || !sendable().length;
     b.querySelector('span').textContent = on ? label : 'Lưu vào kho chung';
   }
 
@@ -181,17 +198,22 @@ var KhoTab = (function () {
     try { await Kho.refresh(); } catch (err) { UI.alert('Không đọc được kho chung', esc(err.message)); return; }
     var kho = Kho.state.kho;
     if (!kho.length) { UI.toast('Kho chung đang trống'); return; }
-    var data = kho.slice().sort(function (a, b) {
-      var da = Common.daysSince(a[2]), db = Common.daysSince(b[2]);
+    // Sao lưu đủ trạng thái + nhãn. Mã Chờ đối soát xếp trước, tồn lâu nhất lên đầu.
+    var infos = kho.map(function (r) { return TrangThai.lookup([r], r[0]); });
+    infos.sort(function (a, b) {
+      if (a.trangThai !== b.trangThai) return a.trangThai === TrangThai.CHO ? -1 : 1;
+      var da = Common.daysSince(a.ngayDoiSoat), db = Common.daysSince(b.ngayDoiSoat);
       return (db === null ? -1 : db) - (da === null ? -1 : da);
-    }).map(function (r, i) {
-      var d = Common.daysSince(r[2]);
-      return { 'STT': i + 1, 'Mã vận đơn': r[1] || r[0], 'Ngày đối soát': r[2], 'Số ngày tồn': d !== null ? d : '',
-               'Người tải': r[3], 'Thời gian tải': UI.fmtIso(r[4]) };
+    });
+    var data = infos.map(function (x, i) {
+      var d = Common.daysSince(x.ngayDoiSoat);
+      return { 'STT': i + 1, 'Mã vận đơn': x.maGoc || x.ma, 'Trạng thái': x.nhan, 'Ngày đối soát': x.ngayDoiSoat,
+               'Số ngày tồn': x.trangThai === TrangThai.CHO && d !== null ? d : '', 'Sàn': x.sanLabel, 'Gian hàng': x.gianHang,
+               'Loại file': x.loaiFile, 'Ngày khớp': x.ngayKhop };
     });
     var ws = XLSX.utils.json_to_sheet(data);
     Common.forceTextCol(ws, 1);
-    ws['!cols'] = [{ wch: 6 }, { wch: 26 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 18 }];
+    ws['!cols'] = [{ wch: 6 }, { wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 14 }];
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Kho_chung');
     var t = new Date();
@@ -205,14 +227,12 @@ var KhoTab = (function () {
     if (!info.coBanTruoc || !info.ghiCuoi) { UI.alert('Không có gì để hoàn tác', 'Kho chung chưa có lần ghi nào trước đó.'); return; }
     var g = info.ghiCuoi;
     var ok = await UI.confirm('Hoàn tác lần ghi gần nhất',
-      'Lần ghi gần nhất: <b>' + esc(g.hanhDong) + '</b> bởi <b>' + esc(g.nguoi) + '</b> lúc ' + esc(UI.fmtIso(g.thoiGian)) + '.<br>' +
+      'Lần ghi gần nhất: <b>' + esc(g.hanhDong) + '</b> lúc ' + esc(UI.fmtIso(g.thoiGian)) + '.<br>' +
       'Kho chung (đang có ' + fmtNum(info.soMa) + ' mã) sẽ quay về trạng thái ngay trước lần ghi đó. Bấm Hoàn tác lần nữa để làm lại.',
       'Hoàn tác', true);
     if (!ok) return;
-    var nguoi = UI.ensureName();
-    if (!nguoi) return;
     try {
-      var res = await Api.undo(nguoi, info.phienBan);
+      var res = await Api.undo(info.phienBan);
       Kho.apply(res);
       UI.toast('Đã hoàn tác · kho còn ' + fmtNum(res.info.soMa) + ' mã', null, 'ok');
     } catch (err) { UI.alert('Chưa hoàn tác được', esc(err.message)); }
@@ -224,20 +244,19 @@ var KhoTab = (function () {
     $('kho_btnUndo').disabled = !(ok && st.info.coBanTruoc);
     var tb = $('kho_history');
     if (!ok) {
-      tb.innerHTML = '<tr class="empty-row"><td colspan="4">' + (Kho.status === 'loading' ? 'Đang tải…' : 'Chưa đọc được lịch sử kho chung.') + '</td></tr>';
+      tb.innerHTML = '<tr class="empty-row"><td colspan="3">' + (Kho.status === 'loading' ? 'Đang tải…' : 'Chưa đọc được lịch sử kho chung.') + '</td></tr>';
     } else if (!st.lichSu.length) {
-      tb.innerHTML = '<tr class="empty-row"><td colspan="4">Chưa có thao tác nào.</td></tr>';
+      tb.innerHTML = '<tr class="empty-row"><td colspan="3">Chưa có thao tác nào.</td></tr>';
     } else {
       tb.innerHTML = st.lichSu.map(function (h) {
-        return '<tr><td>' + esc(UI.fmtIso(h.thoiGian)) + '</td><td>' + esc(h.nguoi) + '</td><td><b>' + esc(h.hanhDong) + '</b></td><td>' + esc(h.chiTiet) + '</td></tr>';
+        return '<tr><td>' + esc(UI.fmtIso(h.thoiGian)) + '</td><td><b>' + esc(h.hanhDong) + '</b></td><td>' + esc(h.chiTiet) + '</td></tr>';
       }).join('');
     }
     render();
   }
 
   function init() {
-    $('kho_name').value = UI.getName();
-    $('kho_name').addEventListener('change', function () { UI.setName($('kho_name').value); });
+    UI.memDel('doiSoat_tenNguoiTai');   // bản trước có lưu tên người; không dùng nữa
     var draft = UI.memGet(DRAFT_KEY);
     if (draft) $('kho_input').value = draft;
     $('kho_input').addEventListener('input', function () { UI.memSet(DRAFT_KEY, $('kho_input').value); });

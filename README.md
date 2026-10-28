@@ -5,22 +5,32 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 
 > Hướng dẫn cài đặt và cách dùng hằng tuần: **[HUONG-DAN.md](HUONG-DAN.md)**.
 
-## Ba tab
+## Bốn tab
 
 | Tab | Việc làm |
 | --- | --- |
-| **Kho / Đối soát** | Dán tin nhắn Zalo (`[QR]`, `[C128]`, khối CSV, tiêu đề Zalo) hoặc tải file Excel/CSV mã kho → xem trước, xoá mã sai, gộp trùng → **Lưu vào kho chung** (Gộp thêm / Thay thế). Có Hoàn tác, Tải kho về Excel, lịch sử. |
-| **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (và file mẫu đơn thiếu đã điền) → đối soát với kho chung → xoá khỏi kho những mã Shopee đã khớp (sau khi xác nhận). |
-| **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này **không** bị xoá khỏi kho). |
+| **Kho / Đối soát** | Dán tin nhắn Zalo (`[QR]`, `[C128]`, khối CSV, tiêu đề Zalo) hoặc tải file Excel/CSV mã kho → xem trước, xoá mã sai, gộp trùng, bỏ qua mã đã khớp → **Lưu vào kho chung** (Gộp thêm / Thay thế). Có Hoàn tác, Tải kho về Excel, lịch sử. |
+| **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (mỗi file có ô **Gian hàng** và **Loại file**) → đối soát với kho chung → chuyển mã Shopee đã khớp sang **Đã khớp** (sau khi xác nhận) → khối "Vừa khớp lần này". |
+| **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này không bị đổi trạng thái). |
+| **Đã đối soát** | Bảng mã Đã khớp (sàn, gian, loại file, ngày đối soát, ngày khớp), lọc sàn / gian / tuần khớp / tìm mã, xuất Excel theo bộ lọc. |
 
-Dòng trạng thái ở đầu trang (cả 3 tab): `Tải lần cuối: dd/mm/yyyy hh:mm bởi <tên> · N mã trong kho`, kèm nhãn xanh
-"Tuần này đã có người tải kho" (lần tải cuối trong 7 ngày) hoặc nhãn vàng "Chưa tải kho tuần này".
+Ô **Tìm một mã** ở đầu trang (mọi tab) cho biết mã đang Chờ đối soát / Đã khớp / Không có trong kho.
+Không đăng nhập, không ghi tên người: lịch sử chỉ có thời gian, hành động và số lượng.
+
+## Kho "không xoá, chỉ đổi trạng thái"
+
+Mỗi mã trong sheet `KHO` có `trang_thai`: **`cho`** (Chờ đối soát) hoặc **`khop`** (Đã khớp, kèm `san`, `gian_hang`,
+`loai_file`, `ngay_khop`). Khi đối soát một sàn, chỉ những mã **đang chờ và có trong chứng từ của chính sàn đó** chuyển
+sang `khop`; mã đã `khop` thì giữ nguyên (đối soát lại vẫn tính là khớp, không đổi ngày khớp). Nạp lại một mã đã `khop` sẽ bị
+bỏ qua, không đưa về `cho`. Hàm `donKho()` chạy mỗi đêm (trigger tạo bằng `taoTriggerDonKho()`), xoá mã `cho` quá 60 ngày
+kể từ ngày đối soát và mã `khop` quá 60 ngày kể từ ngày khớp. Kho cũ được chuyển tự động bằng `migrate()` (chạy lại an toàn).
 
 ## Giao diện và chủ đề
 
-Đầu trang (cả 3 tab) có 4 thẻ số liệu kho chung: **Mã trong kho**, **Tải lần cuối**, **Tồn từ 7 ngày trở lên**, **Tuần này**.
+Đầu trang (cả 4 tab) có 4 thẻ số liệu kho chung: **Mã trong kho** (chờ đối soát · đã khớp), **Tải lần cuối**
+(`dd/mm/yyyy hh:mm · N mã trong kho`), **Tồn từ 7 ngày trở lên** (chỉ mã chờ), **Tuần này** (nhãn xanh/vàng theo mốc 7 ngày).
 Tab Kho chia 3 bước: ① Nhập mã → ② Xem trước → ③ Lưu vào kho. Màu nút chính và viền thẻ đổi theo tab đang xem
-(Kho xanh dương, Shopee cam, TikTok hồng).
+(Kho xanh dương, Shopee cam, TikTok hồng, Đã đối soát tím).
 
 Nút 🎨 ở góc phải thanh trên cùng mở hộp chọn chủ đề: **Mèo con** (mặc định), **Vintage**, **Tối giản**, mỗi chủ đề có
 công tắc Sáng/Tối (6 biến thể). Lựa chọn lưu trong trình duyệt (localStorage, khoá `doiSoat_chuDe_v1`), mỗi máy một lựa chọn riêng.
@@ -43,7 +53,7 @@ Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee/TikTok | Loại 
 ## Cấu trúc
 
 ```
-index.html              trang duy nhất (3 tab)
+index.html              trang duy nhất (4 tab)
 css/themes.css          6 bộ biến màu (3 chủ đề × Sáng/Tối)
 css/app.css             giao diện, chỉ dùng biến
 js/config.js            API_URL: chỗ duy nhất cần sửa sau khi deploy
@@ -53,11 +63,13 @@ js/core/                logic thuần, không đụng DOM, có test
   kho-input.js          tách tin nhắn Zalo, đọc file mã kho, gộp trùng
   shopee-core.js        tính toán đối soát Shopee (tách từ công cụ gốc)
   tiktok-core.js        tính toán đối soát TikTok (tách từ công cụ gốc)
+  trang-thai.js         mô hình trạng thái: mã cần chuyển 'khop', nhãn loại file, tìm một mã
+  da-doi-soat.js        tab Đã đối soát: danh sách, bộ lọc, xuất Excel
   template.js           bộ cột file mẫu / file xuất, đọc lại file
 js/api.js               gọi Web app + giữ bản kho mới nhất
 js/ui.js                toast, hộp thoại, phân trang, kéo thả, tên người dùng
 js/kho-sync.js          tải kho trước khi đối soát, xác nhận và xoá mã đã khớp
-js/kho-tab.js, shopee.js, tiktok.js, app.js   giao diện từng tab
+js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, app.js   giao diện từng tab
 apps-script/Code.gs     backend Google Apps Script
 tests/                  test Node (node --test) + e2e Playwright
 goc/                    hai công cụ gốc, giữ lại để đối chiếu
@@ -69,7 +81,8 @@ xlsx 0.18.5 và Chart.js 4.4.1 tải từ cdnjs như bản gốc. Không có bư
 
 ```bash
 npm install          # chỉ để có xlsx cho test
-npm test             # bộ tách mã, gộp trùng, xoá đúng sàn, bộ cột, backend (Code.gs chạy trên Apps Script giả lập)
+npm test             # bộ tách mã, gộp trùng, chuyển trạng thái đúng sàn, bộ cột, chủ đề, tab Đã đối soát,
+                     # backend (Code.gs chạy trên Apps Script giả lập: dọn 60 ngày, migrate, hoàn tác, ghi theo lô)
 npm run test:e2e     # (tuỳ chọn) chạy trang thật bằng Playwright + Chromium, máy chủ giả lập dùng chính Code.gs;
                      # quét tương phản mọi chữ trên trang ở cả 6 chủ đề, kiểm tra điện thoại 390px
 ```

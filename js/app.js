@@ -5,7 +5,8 @@
 var App = (function () {
   var esc = Common.escapeHtml, fmtNum = Common.fmtNum;
   var WEEK_MS = 7 * 86400000;
-  var TITLES = { kho: 'Kho / Đối soát — kho mã chung', sp: 'Đối soát đơn hàng trả — Shopee', tt: 'Đối soát đơn hàng trả — TikTok Shop' };
+  var TITLES = { kho: 'Kho / Đối soát — kho mã chung', sp: 'Đối soát đơn hàng trả — Shopee', tt: 'Đối soát đơn hàng trả — TikTok Shop',
+                 ds: 'Đã đối soát — mã đã khớp' };
 
   function $(id) { return document.getElementById(id); }
 
@@ -13,7 +14,7 @@ var App = (function () {
   function switchTab(p) {
     if (!TITLES[p]) p = 'kho';
     document.documentElement.setAttribute('data-tab', p);
-    ['kho', 'sp', 'tt'].forEach(function (k) {
+    ['kho', 'sp', 'tt', 'ds'].forEach(function (k) {
       $('pane_' + k).classList.toggle('active', k === p);
       var b = $('platBtn_' + k);
       b.classList.toggle('active', k === p);
@@ -40,7 +41,7 @@ var App = (function () {
     if (!Api.configured() || Kho.status !== 'ok') {
       var text = Kho.status === 'loading' || Kho.status === 'idle' ? 'Đang tải…' : '—';
       setStat('count', text, ''); setStat('old', '—', '');
-      $('st_lastWho').textContent = '—'; $('st_lastWhen').textContent = ' ';
+      $('st_lastTime').textContent = '—'; $('st_lastSub').textContent = '\u00a0';
       $('st_week').innerHTML = '<span class="stat-sub">—</span>';
       if (!Api.configured()) msg.innerHTML = '<div class="guide-box">' + UI.guideHtml() + '</div>';
       else if (Kho.status === 'error') msg.innerHTML = '<div class="err-box"><span><b>Không đọc được kho chung:</b> ' + esc(Kho.error && Kho.error.message) + '</span>' +
@@ -50,19 +51,33 @@ var App = (function () {
     }
     msg.innerHTML = '';
     var st = Kho.state, info = st.info, last = info.lanTaiCuoi;
-    var old = st.kho.filter(function (r) { var d = Common.daysSince(r[2]); return d !== null && d >= 7; }).length;
-    setStat('count', fmtNum(info.soMa), 'mã chờ đối soát');
+    // Tuổi tồn chỉ tính mã còn Chờ đối soát; mã Đã khớp không còn "tồn".
+    var old = st.kho.filter(function (r) { var d = Common.daysSince(r[2]); return !TrangThai.isKhop(r) && d !== null && d >= 7; }).length;
+    setStat('count', fmtNum(info.soCho), 'chờ đối soát · ' + fmtNum(info.soKhop) + ' mã đã khớp');
     setStat('old', fmtNum(old), old ? 'cần truy gấp' : 'không có mã tồn lâu');
     $('st_oldCard').classList.toggle('is-warn', old > 0);
-    if (last) {
-      $('st_lastWho').textContent = last.nguoi;
-      $('st_lastWhen').textContent = UI.fmtIso(last.thoiGian) + ' · ' + fmtNum(last.soMa) + ' mã';
-      $('st_week').innerHTML = weekChip(Date.now() - new Date(last.thoiGian).getTime() <= WEEK_MS);
-    } else {
-      $('st_lastWho').textContent = 'Chưa ai tải';
-      $('st_lastWhen').textContent = ' ';
-      $('st_week').innerHTML = weekChip(false);
+    // "Tải lần cuối: dd/mm/yyyy hh:mm · N mã trong kho" — không có tên người.
+    $('st_lastTime').textContent = last ? UI.fmtIso(last.thoiGian) : 'Chưa có';
+    $('st_lastSub').textContent = fmtNum(info.soMa) + ' mã trong kho';
+    $('st_week').innerHTML = weekChip(!!last && Date.now() - new Date(last.thoiGian).getTime() <= WEEK_MS);
+  }
+
+  /* ---------- Ô "Tìm một mã" ---------- */
+  function renderLookup() {
+    var box = $('lookupResult'), q = $('lookupInput').value;
+    if (!Common.sanitizeTrackingId(q)) { box.innerHTML = ''; return; }
+    if (Kho.status !== 'ok') { box.innerHTML = '<span>Chưa đọc được kho chung.</span>'; return; }
+    var x = TrangThai.lookup(Kho.rows(), q);
+    var chip = x.trangThai === 'khop' ? 'chip-ok' : x.trangThai === 'cho' ? 'chip-warn' : 'badge-red';
+    var html = '<code>' + esc(x.maGoc || x.ma) + '</code><span class="chip ' + chip + '" id="lookupStatus">' + esc(x.nhan) + '</span>';
+    if (x.trangThai !== 'khong') {
+      html += '<span>Ngày đối soát: <b>' + esc(x.ngayDoiSoat || '—') + '</b></span>';
+      if (x.trangThai === 'khop') {
+        html += '<span>Ngày khớp: <b>' + esc(x.ngayKhop || '—') + '</b></span><span>Sàn: <b>' + esc(x.sanLabel || '—') + '</b></span>' +
+          '<span>Gian hàng: <b>' + esc(x.gianHang || '—') + '</b></span><span>Loại file: <b>' + esc(x.loaiFile || '—') + '</b></span>';
+      }
     }
+    box.innerHTML = html;
   }
 
   function refreshStatus() {
@@ -76,8 +91,10 @@ var App = (function () {
     Theme.onChange(function () { SP.applyChartTheme(); TT.applyChartTheme(); });
     switchTab(UI.memGet('platform') || 'kho');
     Kho.onChange(renderStatus);
+    Kho.onChange(renderLookup);
+    $('lookupInput').addEventListener('input', renderLookup);
     renderStatus();
-    KhoTab.init(); SP.init(); TT.init();
+    KhoTab.init(); SP.init(); TT.init(); DsTab.init();
     if (Api.configured()) Kho.refresh().catch(function () {});
   }
 

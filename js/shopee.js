@@ -29,17 +29,15 @@ function yieldThread() { return new Promise(function(r){ setTimeout(r, 10); }); 
 /* ---------- Quản lý danh sách file ---------- */
 function zoneArr(z) { return z === 1 ? filesA : filesB; }
 
-function editShopName(z, idx) {
-  var arr = zoneArr(z);
-  var oldName = arr[idx].customShopName || parseShopName(arr[idx].name);
-  var newName = prompt('Nhập tên gian hàng:', oldName);
-  if (newName !== null && newName.trim() !== "") { arr[idx].customShopName = newName.trim(); renderAll(); }
-}
 function removeFile(z, i, e) { e.stopPropagation(); zoneArr(z).splice(i, 1); renderAll(); }
 function addFiles(z, newFiles) {
   var arr = zoneArr(z);
   Array.from(newFiles).forEach(function(f) {
-    if (!arr.find(function(x){ return x.name === f.name; })) arr.push(f);
+    if (arr.find(function(x){ return x.name === f.name; })) return;
+    // Nhãn mặc định: gian đoán từ tên file, loại file đoán từ tên file / ô tải. Sửa được trong danh sách.
+    f.customShopName = parseShopName(f.name);
+    f.loai = TrangThai.doanLoai('shopee', f.name, z === 1 ? 'Đơn hàng' : 'Khiếu nại');
+    arr.push(f);
   });
   renderAll();
 }
@@ -47,15 +45,7 @@ function renderFileList(listId, arr, z) {
   var el = _$(listId);
   if (!arr.length) { el.innerHTML = ''; return; }
   el.innerHTML = arr.map(function(f, i) {
-    var shop = f.customShopName || parseShopName(f.name);
-    return '<div class="file-item">' +
-      '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
-      '<span class="file-item-name">' + esc(f.name) + '</span>' +
-      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="SP.editShopName(' + z + ',' + i + ')"><span class="emo" aria-hidden="true">🏷️</span> ' + esc(shop) + '</span>' +
-      '<span class="file-item-type">' + fmtSize(f.size) + '</span>' +
-      '<button class="file-item-del" onclick="SP.removeFile(' + z + ',' + i + ',event)">' +
-        '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button></div>';
+    return UI.fileItemHtml(f, z + ':' + i, 'SP.removeFile(' + z + ',' + i + ',event)');
   }).join('');
 }
 function renderAll() {
@@ -86,23 +76,27 @@ async function runMatchInner() {
   progress(2);
 
   /* ---- Kho chung: đọc từ server ngay lúc bấm ---- */
-  var khoItems = await KhoSync.loadForRun();
-  if (!khoItems) { _$('pb').style.display = 'none'; return; }
+  var khoRows = await KhoSync.loadForRun();
+  if (!khoRows) { _$('pb').style.display = 'none'; return; }
   progress(20);
 
   /* ---- Đọc 2 loại file Shopee ---- */
-  var allShopFiles = filesA.map(function(f){ return {f:f, kind:'don'}; })
-             .concat(filesB.map(function(f){ return {f:f, kind:'khieunai'}; }));
+  // Loại file người dùng chọn quyết định cột mã vận đơn (giao / trả hàng); "Khác" theo ô tải như cũ.
+  var allShopFiles = filesA.map(function(f){ return {f:f, kind:TrangThai.shopeeKind(f.loai, 'don'), loai:f.loai}; })
+             .concat(filesB.map(function(f){ return {f:f, kind:TrangThai.shopeeKind(f.loai, 'khieunai'), loai:f.loai}; }));
   var books = [];
   for (var fi = 0; fi < allShopFiles.length; fi++) {
     var item = allShopFiles[fi];
-    books.push({ wb: await Common.readWb(item.f), kind: item.kind, shop: item.f.customShopName || parseShopName(item.f.name) });
+    books.push({ wb: await Common.readWb(item.f), kind: item.kind, loai: item.loai, shop: (item.f.customShopName || '').trim() || parseShopName(item.f.name) });
     await yieldThread();
     progress(20 + Math.round((fi+1)/allShopFiles.length*55));
   }
 
-  var R = ShopeeCore.match({ files: books, khoItems: khoItems, skipRefundOnly: _$('chkSkipRefundOnly').checked });
-  var records = R.records, missA = R.missA, missB = R.missB, khoIds = R.khoIds, shopeeIds = R.shopeeIds;
+  // Đối soát với MỌI mã trong kho (cả mã đã khớp từ trước, để đối soát lại vẫn tính là khớp),
+  // rồi tách ra: mã 'cho' cần chuyển sang 'khop', và "kho chưa có chứng từ" chỉ gồm mã 'cho'.
+  var R = ShopeeCore.match({ files: books, khoItems: TrangThai.items(khoRows), skipRefundOnly: _$('chkSkipRefundOnly').checked });
+  var T = TrangThai.sauDoiSoat(R, khoRows);
+  var records = R.records, missA = R.missA, missB = T.missB, khoIds = R.khoIds, shopeeIds = R.shopeeIds;
   var matchCount = R.matchCount, rate = R.rate, refundOnlyCount = R.refundOnlyCount, noTidCount = R.noTidCount;
 
   resultMissA = missA; resultMissB = missB;
@@ -112,7 +106,7 @@ async function runMatchInner() {
   searchStrA = ''; searchStrB = '';
 
   /* ---- Chỉ số ---- */
-  _$('mTotal').textContent   = fmtNum(khoIds.size);
+  _$('mTotal').textContent   = fmtNum(T.soCho);
   _$('mShopee').textContent  = fmtNum(shopeeIds.size);
   _$('mMatched').textContent = fmtNum(matchCount);
   _$('mRate').textContent    = rate + '%';
@@ -238,7 +232,7 @@ async function runMatchInner() {
 
   /* ---- Kho chung: xoá mã Shopee đã khớp (sau khi người dùng đồng ý) ---- */
   await yieldThread();
-  await KhoSync.offerRemoval('sp', 'shopee', R.toRemove);
+  await KhoSync.offerKhop('sp', 'shopee', T.khop, T.daKhopTruoc.length);
 }
 
 function applyChartTheme() {
@@ -268,7 +262,7 @@ function renderTableA() {
   tbody.innerHTML = filtered.slice(start, start+pageSize).map(function(r, i) {
     return '<tr><td>'+(start+i+1)+'</td>'+
       '<td><span class="shop-tag">'+esc(r.shop)+'</span></td>'+
-      '<td><span class="type-tag">'+(r.kind==='don'?'Đơn hàng':r.kind==='khieunai'?'Khiếu nại':'<span class="emo" aria-hidden="true">📂</span> Xuất lại')+'</span></td>'+
+      '<td><span class="type-tag">'+esc(TrangThai.loaiCuaDong(r))+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td><code style="opacity:.7">'+esc(r.oid||'—')+'</code></td>'+
       '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">'+esc(r.prod||'—')+'</td>'+
@@ -311,7 +305,7 @@ function switchTab(paneId, btn) {
 function exportExcelA() {
   if (!resultMissA.length) { alert('Không có mã nào để xuất!'); return; }
   var recs = resultMissA.map(function(r) {
-    return { tid: r.tid, shop: r.shop, typeLabel: ShopeeCore.typeLabel(r), prod: r.prod, variant: r.variant };
+    return { tid: r.tid, shop: r.shop, typeLabel: TrangThai.loaiCuaDong(r), prod: r.prod, variant: r.variant };
   });
   UI.downloadWb(Template.buildExportWorkbook('shopee', recs, new Date()),
     'Shopee_chua_ve_kho_'+new Date().toISOString().slice(0,10)+'.xlsx');
@@ -338,10 +332,13 @@ function downloadTemplate() {
 function init() {
   UI.setupDropZone(_$('zone1'), _$('inp1'), function (fs) { addFiles(1, fs); });
   UI.setupDropZone(_$('zone2'), _$('inp2'), function (fs) { addFiles(2, fs); });
+  var byKey = function (key) { var p = key.split(':'); return zoneArr(+p[0])[+p[1]]; };
+  UI.bindFileFields(_$('list1'), byKey);
+  UI.bindFileFields(_$('list2'), byKey);
   renderAll();
 }
 
 return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
-         removeFile: removeFile, editShopName: editShopName, applyChartTheme: applyChartTheme };
+         removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();
