@@ -243,20 +243,6 @@
       <div class="sum-card warn" id="sp_sumOldCard"><div class="sum-label">Tồn từ 7 ngày</div><div class="sum-value" id="sp_sumOld">—</div><div class="sum-sub">cần truy gấp</div></div>
     </div>
 
-    <section class="card" id="sp_vkCard" hidden>
-      <div class="card-head">
-        <h2 class="card-h">Vừa khớp lần này <span id="sp_vkCount"></span></h2>
-        <span class="chip chip-warn" id="sp_vkNote"></span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th style="width:50px">STT</th><th>Mã vận đơn</th><th>Gian hàng</th><th>Loại file</th><th>Ngày khớp</th></tr></thead>
-          <tbody id="sp_vkBody"></tbody>
-        </table>
-      </div>
-      <div class="pagination" id="sp_vkPager"></div>
-    </section>
-
     <section class="card">
       <h2 class="section-label">Kết quả đối soát tổng quan</h2>
       <div class="metrics-grid">
@@ -300,6 +286,7 @@
       <div class="tab-row" role="tablist">
         <button class="tab-btn active" id="sp_btn-tabA" onclick="SP.switchTab('tabA',this)">Chưa về kho <span id="sp_cntA"></span></button>
         <button class="tab-btn" id="sp_btn-tabB" onclick="SP.switchTab('tabB',this)">Kho chưa có chứng từ <span id="sp_cntB"></span></button>
+        <button class="tab-btn" id="sp_btn-tabC" onclick="SP.switchTab('tabC',this)">Đã khớp kho <span id="sp_cntC">(0)</span></button>
       </div>
       <div class="tab-pane active" id="sp_tabA">
         <div class="table-header">
@@ -342,6 +329,29 @@
           </table>
         </div>
         <div class="pagination" id="sp_pagerB"></div>
+      </div>
+      <div class="tab-pane" id="sp_tabC">
+        <div class="table-header">
+          <div class="table-header-left">
+            <h3 class="section-label" style="margin:0">Chứng từ Shopee có trong kho</h3>
+            <input type="text" class="table-search" id="sp_searchC" placeholder="Tìm mã vận đơn…" aria-label="Tìm mã vận đơn" oninput="SP.handleSearchC()">
+          </div>
+          <button class="btn-export" id="sp_btnExportC" onclick="SP.exportExcelC()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Xuất Excel đã khớp kho
+          </button>
+        </div>
+        <div class="kc-note">
+          <span class="file-summary" id="sp_kcSummary"></span>
+          <span class="chip chip-warn" id="sp_kcNote" hidden></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn</th><th>Ngày đối soát</th></tr></thead>
+            <tbody id="sp_tbodyC"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="sp_pagerC"></div>
       </div>
     </section>
   </div>
@@ -405,20 +415,6 @@
       <div class="sum-card warn" id="tt_sumOldCard"><div class="sum-label">Tồn từ 7 ngày</div><div class="sum-value" id="tt_sumOld">—</div><div class="sum-sub">cần truy gấp</div></div>
     </div>
 
-    <section class="card" id="tt_vkCard" hidden>
-      <div class="card-head">
-        <h2 class="card-h">Vừa khớp lần này <span id="tt_vkCount"></span></h2>
-        <span class="chip chip-warn" id="tt_vkNote"></span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th style="width:50px">STT</th><th>Mã vận đơn</th><th>Gian hàng</th><th>Loại file</th><th>Ngày khớp</th></tr></thead>
-          <tbody id="tt_vkBody"></tbody>
-        </table>
-      </div>
-      <div class="pagination" id="tt_vkPager"></div>
-    </section>
-
     <section class="card">
       <h2 class="section-label">Kết quả đối soát tổng quan</h2>
       <div class="metrics-grid">
@@ -458,6 +454,7 @@
       <div class="tab-row" role="tablist">
         <button class="tab-btn active" id="tt_btn-tabA" onclick="TT.switchTab('tabA',this)">Thiếu trong đối soát <span id="tt_cntA"></span></button>
         <button class="tab-btn" id="tt_btn-tabB" onclick="TT.switchTab('tabB',this)">Chưa có chứng từ TikTok <span id="tt_cntB"></span></button>
+        <button class="tab-btn" id="tt_btn-tabC" onclick="TT.switchTab('tabC',this)">Đã khớp kho <span id="tt_cntC">(0)</span></button>
       </div>
       <div class="tab-pane active" id="tt_tabA">
         <div class="table-header">
@@ -500,6 +497,29 @@
           </table>
         </div>
         <div class="pagination" id="tt_pagerB"></div>
+      </div>
+      <div class="tab-pane" id="tt_tabC">
+        <div class="table-header">
+          <div class="table-header-left">
+            <h3 class="section-label" style="margin:0">Chứng từ TikTok có trong kho</h3>
+            <input type="text" class="table-search" id="tt_searchC" placeholder="Tìm mã vận đơn…" aria-label="Tìm mã vận đơn" oninput="TT.handleSearchC()">
+          </div>
+          <button class="btn-export" id="tt_btnExportC" onclick="TT.exportExcelC()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Xuất Excel đã khớp kho
+          </button>
+        </div>
+        <div class="kc-note">
+          <span class="file-summary" id="tt_kcSummary"></span>
+          <span class="chip chip-warn" id="tt_kcNote" hidden></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn</th><th>Ngày đối soát</th></tr></thead>
+            <tbody id="tt_tbodyC"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="tt_pagerC"></div>
       </div>
     </section>
   </div>
@@ -550,6 +570,7 @@
 <script src="js/core/tiktok-core.js"></script>
 <script src="js/core/trang-thai.js"></script>
 <script src="js/core/da-doi-soat.js"></script>
+<script src="js/core/khop-kho.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/kho-sync.js"></script>

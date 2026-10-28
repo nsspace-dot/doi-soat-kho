@@ -10,7 +10,7 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 | Tab | Việc làm |
 | --- | --- |
 | **Kho / Đối soát** | Dán tin nhắn Zalo (`[QR]`, `[C128]`, khối CSV, tiêu đề Zalo) hoặc tải file Excel/CSV mã kho → xem trước, xoá mã sai, gộp trùng, bỏ qua mã đã khớp → **Lưu vào kho chung** (Gộp thêm / Thay thế). Có Hoàn tác, Tải kho về Excel, lịch sử. |
-| **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (mỗi file có ô **Gian hàng** và **Loại file**) → đối soát với kho chung → chuyển mã Shopee đã khớp sang **Đã khớp** (sau khi xác nhận) → khối "Vừa khớp lần này". |
+| **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (mỗi file có ô **Gian hàng** và **Loại file**) → đối soát với kho chung → chuyển mã Shopee đã khớp sang **Đã khớp** (sau khi xác nhận) → tab con **"Đã khớp kho (N)"** liệt kê mọi mã trong chứng từ có trong kho (đánh dấu mã vừa khớp / đã khớp từ trước), có tìm mã và xuất Excel. |
 | **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này không bị đổi trạng thái). |
 | **Đã đối soát** | Bảng mã Đã khớp (sàn, gian, loại file, ngày đối soát, ngày khớp), lọc sàn / gian / tuần khớp / tìm mã, xuất Excel theo bộ lọc. |
 
