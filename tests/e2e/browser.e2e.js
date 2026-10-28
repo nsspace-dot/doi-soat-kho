@@ -198,7 +198,7 @@ async function main() {
     assert.equal(exRows[0][3], 'Gian hàng Shopee');
     assert.match(exRows[1][0], /^Tuần \d+\/\d{4}$/);
     assert.equal(exRows[1][1] || '', '');
-    assert.deepEqual(exRows[1].slice(2), ['SPXVN99999999', 'Shop A', 'Đơn hàng (hủy / giao KTC)', 'Quần', 'L']);
+    assert.deepEqual(exRows[1].slice(2), ['SPXVN99999999', 'Shop A', 'Đơn hàng', 'Quần', 'L']);
     assert.equal(exA.wb.Sheets[exA.wb.SheetNames[0]].C2.z, '@');
     step('Shopee: xuất "Sàn báo, kho chưa nhận" đúng bộ cột, tuần ISO, KHO trống');
 

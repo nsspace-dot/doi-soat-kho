@@ -82,6 +82,31 @@
              filtered: (R.filtered || []).filter(isCho), soCho: choIds };
   }
 
+  /* ---------- Nhãn "Loại file" ở chỗ tải file ---------- */
+  // Tự đoán loại file từ tên file; không đoán được thì theo ô tải (Shopee) / loại tự nhận (TikTok).
+  function doanLoai(platform, fname, macDinh) {
+    var s = String(fname || '').toLowerCase();
+    if (/mau_don_thieu|chua_co_trong_kho|chua_ve_kho/.test(s)) return 'Khác';
+    if (/khieu|khiếu|claim/.test(s)) return 'Khiếu nại';
+    if (/giao|ktc|failed|unsuccessful/.test(s)) return 'Giao KTC';
+    if (/tra_hang|tra hang|trả hàng|return|refund|hoan_tien|hoàn tiền/.test(s)) return 'Trả hàng';
+    if (/don_hang|đơn hàng|order/.test(s)) return 'Đơn hàng';
+    return macDinh || (platform === 'tiktok' ? 'Trả hàng' : 'Đơn hàng');
+  }
+  /* Chỗ code đối soát vốn dựa vào loại file để chọn cột thì ưu tiên loại người dùng chọn:
+     Shopee: 'don' (mã vận đơn giao) / 'khieunai' (mã vận đơn trả hàng);
+     TikTok: 'giao' (Tracking ID) / 'tra' (Return Tracking ID). "Khác" giữ cách nhận cũ. */
+  function shopeeKind(loai, kindTheoO) {
+    if (loai === 'Khiếu nại' || loai === 'Trả hàng') return 'khieunai';
+    if (loai === 'Đơn hàng' || loai === 'Giao KTC') return 'don';
+    return kindTheoO;
+  }
+  function tiktokType(loai, typeTuDoan) {
+    if (loai === 'Giao KTC') return 'giao';
+    if (loai === 'Trả hàng') return 'tra';
+    return typeTuDoan;
+  }
+
   // Ô "Tìm một mã": trạng thái của một mã trong kho.
   function lookup(rows, query) {
     var ma = Common.sanitizeTrackingId(query);
@@ -96,5 +121,6 @@
 
   return { COL: COL, CHO: CHO, KHOP: KHOP, LOAI_FILE: LOAI_FILE, SAN_LABEL: SAN_LABEL, TT_LABEL: TT_LABEL,
            isKhop: isKhop, items: items, statusMap: statusMap, counts: counts, chuanHoaLoai: chuanHoaLoai,
-           loaiCuaDong: loaiCuaDong, sauDoiSoat: sauDoiSoat, lookup: lookup };
+           loaiCuaDong: loaiCuaDong, sauDoiSoat: sauDoiSoat, lookup: lookup,
+           doanLoai: doanLoai, shopeeKind: shopeeKind, tiktokType: tiktokType };
 });

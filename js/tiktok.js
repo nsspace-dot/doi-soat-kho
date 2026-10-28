@@ -24,30 +24,12 @@ function progress(pct) {
 }
 function yieldThread() { return new Promise(resolve => setTimeout(resolve, 10)); }
 
-function editShopName(idx) {
-  const oldName = filesA[idx].customShopName || parseShopName(filesA[idx].name);
-  const newName = prompt('Nhập tên gian hàng mới:', oldName);
-  if (newName !== null && newName.trim() !== "") {
-    filesA[idx].customShopName = newName.trim();
-    renderAll();
-  }
-}
 
 function renderFileList(listId, arr) {
   var el = _$(listId);
   if (!arr.length) { el.innerHTML = ''; return; }
   el.innerHTML = arr.map(function(f, i) {
-    var shop = f.customShopName || parseShopName(f.name);
-    var ft = parseFileType(f.name);
-    var type = ft === 'giao' ? 'Giao KTC' : ft === 'exported' ? 'Xuất lại' : 'Trả hàng';
-    return '<div class="file-item">' +
-      '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
-      '<span class="file-item-name">' + esc(f.name) + '</span>' +
-      '<span class="file-item-shop" title="Bấm để đổi tên gian hàng" onclick="TT.editShopName(' + i + ')"><span class="emo" aria-hidden="true">🏷️</span> ' + esc(shop) + '</span><span class="file-item-type">' + type + '</span>' +
-      '<span class="file-item-type">' + fmtSize(f.size) + '</span>' +
-      '<button class="file-item-del" onclick="TT.removeFile(' + i + ',event)">' +
-        '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button></div>';
+    return UI.fileItemHtml(f, String(i), 'TT.removeFile(' + i + ',event)');
   }).join('');
 }
 
@@ -58,7 +40,14 @@ function removeFile(i, e) {
 }
 
 function addFiles(newFiles) {
-  Array.from(newFiles).forEach(function(f) { if (!filesA.find(function(x){return x.name===f.name;})) filesA.push(f); });
+  Array.from(newFiles).forEach(function(f) {
+    if (filesA.find(function(x){return x.name===f.name;})) return;
+    // Nhãn mặc định: gian + loại tự đoán từ tên file như trước; sửa được trong danh sách.
+    var ft = parseFileType(f.name);
+    f.customShopName = parseShopName(f.name);
+    f.loai = ft === 'exported' ? 'Khác' : TrangThai.doanLoai('tiktok', f.name, ft === 'giao' ? 'Giao KTC' : 'Trả hàng');
+    filesA.push(f);
+  });
   renderAll();
 }
 
@@ -92,9 +81,9 @@ async function runMatchInner() {
   var books = [];
   for (var fi = 0; fi < filesA.length; fi++) {
     var f = filesA[fi];
-    var ft = parseFileType(f.name);
-    books.push({ wb: await Common.readWb(f), shop: f.customShopName || parseShopName(f.name), ftype: ft,
-                 loai: ft === 'giao' ? 'Giao KTC' : ft === 'tra' ? 'Trả hàng' : 'Khác' });
+    // Loại file người dùng chọn quyết định cột Tracking ID (giao / trả hàng); "Khác" giữ cách tự nhận cũ.
+    books.push({ wb: await Common.readWb(f), shop: (f.customShopName || '').trim() || parseShopName(f.name),
+                 ftype: TrangThai.tiktokType(f.loai, parseFileType(f.name)), loai: f.loai });
     await yieldThread();
     progress(20 + Math.round((fi+1)/filesA.length*55));
   }
@@ -282,7 +271,7 @@ function renderTableA() {
   tbody.innerHTML = pageData.map(function(r,i){
     return '<tr><td>'+(startIdx+i+1)+'</td>'+
       '<td><span class="shop-tag">'+esc(r.shop)+'</span></td>'+
-      '<td><span class="type-tag">'+(r.type==='giao'?'Giao KTC':r.type==='exported'?'<span class="emo" aria-hidden="true">📂</span> Xuất lại':'Trả hàng')+'</span></td>'+
+      '<td><span class="type-tag">'+esc(TrangThai.loaiCuaDong(r))+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td>'+esc(r.kho||'—')+'</td></tr>';
   }).join('');
@@ -320,7 +309,7 @@ function renderTableB() {
 function exportExcelA() {
   if (!resultMissA.length) { alert('Không có mã nào để xuất!'); return; }
   var recs = resultMissA.map(function(r) {
-    return { tid: r.tid, shop: r.shop, typeLabel: TikTokCore.typeLabel(r), prod: r.prod, variant: r.variant };
+    return { tid: r.tid, shop: r.shop, typeLabel: TrangThai.loaiCuaDong(r), prod: r.prod, variant: r.variant };
   });
   UI.downloadWb(Template.buildExportWorkbook('tiktok', recs, new Date()),
     'TikTok_chua_co_trong_kho_'+new Date().toISOString().slice(0,10)+'.xlsx');
@@ -367,10 +356,11 @@ function applyChartTheme() {
 
 function init() {
   UI.setupDropZone(_$('zone1'), _$('inp1'), addFiles);
+  UI.bindFileFields(_$('list1'), function (key) { return filesA[+key]; });
   renderAll();
 }
 
 return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
-         removeFile: removeFile, editShopName: editShopName, applyChartTheme: applyChartTheme };
+         removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

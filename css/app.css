@@ -381,3 +381,11 @@ details.skipped pre { margin: 10px 0 0; white-space: pre-wrap; word-break: break
 .mode-switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent-deep); }
 .mode-switch input:checked + .switch-track .switch-knob { transform: translateX(20px); background: var(--on-accent); }
 .mode-switch input:focus-visible + .switch-track { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---- Nhãn Gian hàng + Loại file của từng file sàn ---- */
+.file-item { flex-wrap: wrap; }
+.file-fields { flex-basis: 100%; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.file-field { display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 700; flex: 1 1 160px; min-width: 0; }
+.file-field input, .file-field select { background: var(--input-bg); color: var(--text); border: var(--bw) solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 6px 8px; font-size: 14px; font-family: inherit; min-width: 0; width: 100%; }
+.file-field input:focus, .file-field select:focus { border-color: var(--accent); outline: none; }

@@ -90,6 +90,36 @@ var UI = (function () {
   function memGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function memDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
+  /* ---------- 2 ô nhãn cho mỗi file sàn: Gian hàng + Loại file ---------- */
+  function fileItemHtml(f, key, onDel) {
+    var opts = TrangThai.LOAI_FILE.map(function (l) {
+      return '<option' + (l === f.loai ? ' selected' : '') + '>' + esc(l) + '</option>';
+    }).join('');
+    return '<div class="file-item">' +
+      '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+      '<span class="file-item-name" title="' + esc(f.name) + '">' + esc(f.name) + '</span>' +
+      '<span class="file-item-type">' + Common.fmtSize(f.size) + '</span>' +
+      '<button class="file-item-del" onclick="' + onDel + '" aria-label="Bỏ file ' + esc(f.name) + '">' +
+        '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+      '<div class="file-fields">' +
+        '<label class="file-field"><span>Gian hàng</span><input type="text" class="file-gian" data-key="' + key + '" maxlength="60" value="' + esc(f.customShopName || '') + '"></label>' +
+        '<label class="file-field"><span>Loại file</span><select class="file-loai" data-key="' + key + '">' + opts + '</select></label>' +
+      '</div></div>';
+  }
+  // Ghi giá trị người dùng sửa vào đối tượng file (không vẽ lại để không mất con trỏ khi gõ).
+  function bindFileFields(listEl, getFile) {
+    listEl.addEventListener('input', function (e) {
+      if (e.target.classList.contains('file-gian')) getFile(e.target.getAttribute('data-key')).customShopName = e.target.value;
+    });
+    listEl.addEventListener('change', function (e) {
+      if (e.target.classList.contains('file-loai')) getFile(e.target.getAttribute('data-key')).loai = e.target.value;
+      if (e.target.classList.contains('file-gian')) {
+        var f = getFile(e.target.getAttribute('data-key'));
+        f.customShopName = e.target.value.trim();
+      }
+    });
+  }
+
   function fmtIso(iso) {
     var d = new Date(iso);
     return isNaN(d.getTime()) ? String(iso || '') : Common.fmtDT(d);
@@ -108,7 +138,7 @@ var UI = (function () {
   return {
     toast: toast, choose: choose, confirm: confirmBox, alert: alertBox, renderPager: renderPager,
     setupDropZone: setupDropZone, memSet: memSet, memGet: memGet, memDel: memDel,
-    fmtIso: fmtIso,
+    fmtIso: fmtIso, fileItemHtml: fileItemHtml, bindFileFields: bindFileFields,
     downloadWb: downloadWb, guideHtml: guideHtml, esc: esc
   };
 })();
