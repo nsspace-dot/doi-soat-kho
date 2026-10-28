@@ -34,7 +34,7 @@ function contrast(a, b) {
 const SURFACES = ['bg', 'surface', 'surface-2'];
 const PAIRS = [];
 for (const fg of ['text', 'text-2', 'text-muted']) for (const bg of SURFACES.concat('input-bg')) PAIRS.push([fg, bg]);
-for (const s of ['kho', 'sp', 'tt']) {
+for (const s of ['kho', 'sp', 'tt', 'ds']) {
   PAIRS.push(['on-' + s, s]);                       // nút chính, tab đang chọn, ô số bước, trang đang xem
   for (const bg of SURFACES) PAIRS.push(['ink-' + s, bg]);  // chữ màu sàn trên thẻ
 }
@@ -77,6 +77,7 @@ test('Màu nhận diện sàn giữ đúng tông ở mọi theme (Kho xanh dươ
     assert.ok(hue(t.kho) >= 195 && hue(t.kho) <= 230, v + ' kho ' + hue(t.kho));
     assert.ok(hue(t.sp) >= 12 && hue(t.sp) <= 32, v + ' sp ' + hue(t.sp));
     assert.ok(hue(t.tt) >= 320 && hue(t.tt) <= 350, v + ' tt ' + hue(t.tt));
+    assert.ok(hue(t.ds) >= 250 && hue(t.ds) <= 290, v + ' ds (tím) ' + hue(t.ds));
   }
 });
 

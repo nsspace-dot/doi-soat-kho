@@ -7,6 +7,7 @@
 :root, html[data-tab="kho"] { --accent: var(--kho); --on-accent: var(--on-kho); --accent-ink: var(--ink-kho); --accent-deep: var(--deep-kho); }
 html[data-tab="sp"] { --accent: var(--sp); --on-accent: var(--on-sp); --accent-ink: var(--ink-sp); --accent-deep: var(--deep-sp); }
 html[data-tab="tt"] { --accent: var(--tt); --on-accent: var(--on-tt); --accent-ink: var(--ink-tt); --accent-deep: var(--deep-tt); }
+html[data-tab="ds"] { --accent: var(--ds); --on-accent: var(--on-ds); --accent-ink: var(--ink-ds); --accent-deep: var(--deep-ds); }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
@@ -46,6 +47,7 @@ button, input, textarea, select { font-family: inherit; }
   font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow); }
 .tab[data-tab="sp"] { --c: var(--sp); --on: var(--on-sp); }
 .tab[data-tab="tt"] { --c: var(--tt); --on: var(--on-tt); }
+.tab[data-tab="ds"] { --c: var(--ds); --on: var(--on-ds); }
 .tab .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
 .tab .tab-ico { font-size: 18px; line-height: 1; }
 .tab:hover { border-color: var(--c); }
@@ -389,3 +391,19 @@ details.skipped pre { margin: 10px 0 0; white-space: pre-wrap; word-break: break
 .file-field input, .file-field select { background: var(--input-bg); color: var(--text); border: var(--bw) solid var(--border-strong);
   border-radius: var(--radius-sm); padding: 6px 8px; font-size: 14px; font-family: inherit; min-width: 0; width: 100%; }
 .file-field input:focus, .file-field select:focus { border-color: var(--accent); outline: none; }
+
+/* ---- Ô "Tìm một mã" (đầu trang, cả 4 tab) ---- */
+.lookup { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 14px;
+  background: var(--surface); border: var(--card-bw) var(--bstyle) var(--border); border-radius: var(--radius); }
+.lookup-label { font-weight: 800; font-size: 14px; color: var(--text); padding-top: 9px; }
+.lookup-input { flex: 0 1 280px; min-width: 0; }
+.lookup-result { flex: 1 1 320px; min-width: 0; font-size: 14px; color: var(--text-2); padding-top: 6px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.lookup-result:empty { display: none; }
+.lookup-result b { color: var(--text); }
+.lookup-result code { font-size: 14px; }
+
+/* ---- Tab Đã đối soát ---- */
+.ds-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+.ds-filters .file-field { color: var(--text-2); }
+@media (max-width: 900px) { .ds-filters { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 400px) { .ds-filters { grid-template-columns: 1fr; } }

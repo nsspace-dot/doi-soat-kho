@@ -5,7 +5,8 @@
 var App = (function () {
   var esc = Common.escapeHtml, fmtNum = Common.fmtNum;
   var WEEK_MS = 7 * 86400000;
-  var TITLES = { kho: 'Kho / Đối soát — kho mã chung', sp: 'Đối soát đơn hàng trả — Shopee', tt: 'Đối soát đơn hàng trả — TikTok Shop' };
+  var TITLES = { kho: 'Kho / Đối soát — kho mã chung', sp: 'Đối soát đơn hàng trả — Shopee', tt: 'Đối soát đơn hàng trả — TikTok Shop',
+                 ds: 'Đã đối soát — mã đã khớp' };
 
   function $(id) { return document.getElementById(id); }
 
@@ -13,7 +14,7 @@ var App = (function () {
   function switchTab(p) {
     if (!TITLES[p]) p = 'kho';
     document.documentElement.setAttribute('data-tab', p);
-    ['kho', 'sp', 'tt'].forEach(function (k) {
+    ['kho', 'sp', 'tt', 'ds'].forEach(function (k) {
       $('pane_' + k).classList.toggle('active', k === p);
       var b = $('platBtn_' + k);
       b.classList.toggle('active', k === p);
@@ -61,6 +62,24 @@ var App = (function () {
     $('st_week').innerHTML = weekChip(!!last && Date.now() - new Date(last.thoiGian).getTime() <= WEEK_MS);
   }
 
+  /* ---------- Ô "Tìm một mã" ---------- */
+  function renderLookup() {
+    var box = $('lookupResult'), q = $('lookupInput').value;
+    if (!Common.sanitizeTrackingId(q)) { box.innerHTML = ''; return; }
+    if (Kho.status !== 'ok') { box.innerHTML = '<span>Chưa đọc được kho chung.</span>'; return; }
+    var x = TrangThai.lookup(Kho.rows(), q);
+    var chip = x.trangThai === 'khop' ? 'chip-ok' : x.trangThai === 'cho' ? 'chip-warn' : 'badge-red';
+    var html = '<code>' + esc(x.maGoc || x.ma) + '</code><span class="chip ' + chip + '" id="lookupStatus">' + esc(x.nhan) + '</span>';
+    if (x.trangThai !== 'khong') {
+      html += '<span>Ngày đối soát: <b>' + esc(x.ngayDoiSoat || '—') + '</b></span>';
+      if (x.trangThai === 'khop') {
+        html += '<span>Ngày khớp: <b>' + esc(x.ngayKhop || '—') + '</b></span><span>Sàn: <b>' + esc(x.sanLabel || '—') + '</b></span>' +
+          '<span>Gian hàng: <b>' + esc(x.gianHang || '—') + '</b></span><span>Loại file: <b>' + esc(x.loaiFile || '—') + '</b></span>';
+      }
+    }
+    box.innerHTML = html;
+  }
+
   function refreshStatus() {
     if (!Api.configured()) { UI.alert('Chưa cấu hình máy chủ kho chung', UI.guideHtml()); return; }
     Kho.refresh().catch(function () {});
@@ -72,8 +91,10 @@ var App = (function () {
     Theme.onChange(function () { SP.applyChartTheme(); TT.applyChartTheme(); });
     switchTab(UI.memGet('platform') || 'kho');
     Kho.onChange(renderStatus);
+    Kho.onChange(renderLookup);
+    $('lookupInput').addEventListener('input', renderLookup);
     renderStatus();
-    KhoTab.init(); SP.init(); TT.init();
+    KhoTab.init(); SP.init(); TT.init(); DsTab.init();
     if (Api.configured()) Kho.refresh().catch(function () {});
   }
 

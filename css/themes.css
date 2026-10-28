@@ -7,7 +7,7 @@
    Biến:
      --bg --surface --surface-2 --input-bg --border --border-strong
      --text --text-2 --text-muted --topbar-bg --topbar-text
-     --kho/--sp/--tt (màu nền tab & nút chính), --on-* (chữ trên nền đó),
+     --kho/--sp/--tt/--ds (màu nền tab & nút chính; ds = tab Đã đối soát), --on-* (chữ trên nền đó),
      --ink-* (chữ màu sàn trên nền thẻ), --deep-* (bóng đáy nút)
      --ok/--err/--warn (mảng màu), --on-ok/--on-err
      --{ok,warn,err,info}-{bg,ink,line} (nhãn, hộp thông báo)
@@ -24,6 +24,7 @@
   --kho: #5B9BEA; --on-kho: #1E1410; --ink-kho: #2F68B0; --deep-kho: #497CBB;
   --sp:  #FF7A45; --on-sp:  #1E1410; --ink-sp:  #B5481A; --deep-sp:  #CC6237;
   --tt:  #FF4F8B; --on-tt:  #1E1410; --ink-tt:  #C02A62; --deep-tt:  #CC3F6F;
+  --ds:  #A98BEF; --on-ds:  #1E1410; --ink-ds:  #6B46C1; --deep-ds:  #876FBF;
 
   --ok: #4CC38A; --on-ok: #10301F; --err: #EF5B6B; --on-err: #2A0A0F; --warn: #F5A524;
   --ok-bg: #E4F7EC; --ok-ink: #1D7046; --ok-line: #9EDFBD;
@@ -56,6 +57,7 @@
   --kho: #7DB2F5; --on-kho: #1E1614; --ink-kho: #9CC5F8; --deep-kho: #4F7EBA;
   --sp:  #FF9468; --on-sp:  #1E1614; --ink-sp:  #FFAA86; --deep-sp:  #C26A45;
   --tt:  #FF6FA0; --on-tt:  #1E1614; --ink-tt:  #FF94B8; --deep-tt:  #C04B76;
+  --ds:  #B9A0F7; --on-ds:  #1E1614; --ink-ds:  #CDB9FA; --deep-ds:  #8670C2;
 
   --ok: #5FD39B; --on-ok: #0F2A1C; --err: #FF7A88; --on-err: #2A0A0F; --warn: #F7B748;
   --ok-bg: #213A2D; --ok-ink: #8BE3B7; --ok-line: #3C7556;
@@ -87,6 +89,7 @@
   --kho: #4F6D8F; --on-kho: #FBF5E6; --ink-kho: #415C7B; --deep-kho: #3F5772;
   --sp:  #A9521F; --on-sp:  #FBF5E6; --ink-sp:  #9E4A1A; --deep-sp:  #874118;
   --tt:  #A84868; --on-tt:  #FBF5E6; --ink-tt:  #A04263; --deep-tt:  #863953;
+  --ds:  #6B5A8E; --on-ds:  #FBF5E6; --ink-ds:  #5F4F80; --deep-ds:  #564872;
 
   --ok: #5F6F4B; --on-ok: #FBF5E6; --err: #A8432B; --on-err: #FBF5E6; --warn: #B7862C;
   --ok-bg: #E6E9D6; --ok-ink: #4A5838; --ok-line: #A9B48D;
@@ -119,6 +122,7 @@
   --kho: #8FB0D6; --on-kho: #1E1810; --ink-kho: #A9C3E2; --deep-kho: #5F7EA3;
   --sp:  #E39361; --on-sp:  #1E1810; --ink-sp:  #EBA87D; --deep-sp:  #A9643A;
   --tt:  #E28FAE; --on-tt:  #1E1810; --ink-tt:  #EBA9C1; --deep-tt:  #A9617C;
+  --ds:  #B6A6D8; --on-ds:  #1E1810; --ink-ds:  #C8BCE4; --deep-ds:  #7F729F;
 
   --ok: #A9BC8A; --on-ok: #1E1810; --err: #E58A72; --on-err: #1E1810; --warn: #E0B45A;
   --ok-bg: #2F3826; --ok-ink: #C3D3A6; --ok-line: #5F6F4B;
@@ -151,6 +155,7 @@
   --kho: #2563EB; --on-kho: #FFFFFF; --ink-kho: #1D4ED8; --deep-kho: #1D4ED8;
   --sp:  #C2410C; --on-sp:  #FFFFFF; --ink-sp:  #C2410C; --deep-sp:  #9A3412;
   --tt:  #BE185D; --on-tt:  #FFFFFF; --ink-tt:  #BE185D; --deep-tt:  #9D174D;
+  --ds:  #6D28D9; --on-ds:  #FFFFFF; --ink-ds:  #6D28D9; --deep-ds:  #5B21B6;
 
   --ok: #15803D; --on-ok: #FFFFFF; --err: #DC2626; --on-err: #FFFFFF; --warn: #D97706;
   --ok-bg: #F0FDF4; --ok-ink: #166534; --ok-line: #BBF7D0;
@@ -182,6 +187,7 @@
   --kho: #60A5FA; --on-kho: #0F172A; --ink-kho: #93C5FD; --deep-kho: #2563EB;
   --sp:  #FB923C; --on-sp:  #0F172A; --ink-sp:  #FDBA74; --deep-sp:  #C2410C;
   --tt:  #F472B6; --on-tt:  #0F172A; --ink-tt:  #F9A8D4; --deep-tt:  #BE185D;
+  --ds:  #A78BFA; --on-ds:  #0F172A; --ink-ds:  #C4B5FD; --deep-ds:  #7C3AED;
 
   --ok: #4ADE80; --on-ok: #0F172A; --err: #F87171; --on-err: #0F172A; --warn: #FBBF24;
   --ok-bg: #12291F; --ok-ink: #86EFAC; --ok-line: #1F5135;

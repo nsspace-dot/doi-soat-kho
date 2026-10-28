@@ -37,6 +37,36 @@ var KhoSync = (function () {
     var box = document.getElementById(pfx + '_syncBox');
     box.className = 'sync-banner';
     box.innerHTML = '';
+    vk[pfx] = null;
+    renderVuaKhop(pfx);
+  }
+
+  /* ---------- Khối "Vừa khớp lần này" (bảng gọn, có phân trang) ---------- */
+  var vk = {};
+  function showVuaKhop(pfx, items) { vk[pfx] = { items: items, page: 1, ok: false, note: 'Chờ xác nhận ghi vào kho chung', ngay: '' }; renderVuaKhop(pfx); }
+  function markVuaKhop(pfx, ok, note, ngay) {
+    if (!vk[pfx]) return;
+    vk[pfx].ok = ok; vk[pfx].note = note; if (ngay) vk[pfx].ngay = ngay;
+    renderVuaKhop(pfx);
+  }
+  function renderVuaKhop(pfx) {
+    var card = document.getElementById(pfx + '_vkCard');
+    if (!card) return;
+    var d = vk[pfx];
+    card.hidden = !d || !d.items.length;
+    if (card.hidden) return;
+    var size = 10, total = Math.max(1, Math.ceil(d.items.length / size));
+    if (d.page > total) d.page = total;
+    var start = (d.page - 1) * size;
+    document.getElementById(pfx + '_vkCount').textContent = '(' + fmtNum(d.items.length) + ' mã)';
+    var note = document.getElementById(pfx + '_vkNote');
+    note.className = 'chip ' + (d.ok ? 'chip-ok' : 'chip-warn');
+    note.textContent = d.note;
+    document.getElementById(pfx + '_vkBody').innerHTML = d.items.slice(start, start + size).map(function (it, i) {
+      return '<tr><td>' + (start + i + 1) + '</td><td><code>' + esc(it.maGoc || it.ma) + '</code></td><td>' + esc(it.gian || '—') +
+        '</td><td><span class="type-tag">' + esc(it.loai) + '</span></td><td>' + esc(d.ngay || '—') + '</td></tr>';
+    }).join('');
+    UI.renderPager(document.getElementById(pfx + '_vkPager'), d.page, total, function (p) { d.page = p; renderVuaKhop(pfx); });
   }
 
   /* items: [{ ma, gian, loai }] — mã 'cho' khớp chứng từ của sàn đang chạy.
@@ -44,6 +74,7 @@ var KhoSync = (function () {
   function offerKhop(pfx, san, items, daKhopTruoc) {
     var label = SAN_LABEL[san];
     var truoc = daKhopTruoc ? ' ' + fmtNum(daKhopTruoc) + ' mã khác đã khớp từ trước, giữ nguyên.' : '';
+    showVuaKhop(pfx, items);
     if (!items.length) {
       banner(pfx, 'done', esc('Không có mã Chờ đối soát nào khớp chứng từ ' + label + '; kho chung không đổi.' + truoc));
       return Promise.resolve();
@@ -58,6 +89,7 @@ var KhoSync = (function () {
   }
 
   function pending(pfx, san, items, msg) {
+    markVuaKhop(pfx, false, 'Chưa ghi vào kho chung');
     banner(pfx, 'pending', esc(msg), { label: 'Chuyển ' + fmtNum(items.length) + ' mã sang Đã khớp', fn: function () { send(pfx, san, items); } });
   }
 
@@ -71,8 +103,8 @@ var KhoSync = (function () {
       var msg = 'Đã chuyển ' + fmtNum(x) + ' mã ' + SAN_LABEL[san] + ' sang Đã khớp. Kho còn ' + fmtNum(st.info.soCho) + ' mã Chờ đối soát.';
       if (x < items.length) msg += ' (' + fmtNum(items.length - x) + ' mã đã được chuyển trước đó hoặc không còn trong kho.)';
       banner(pfx, 'done', esc(msg));
+      markVuaKhop(pfx, true, 'Đã chuyển sang Đã khớp', k.ngayKhop);
       UI.toast(msg, null, 'ok');
-      document.dispatchEvent(new CustomEvent('kho-khop', { detail: { pfx: pfx, ngayKhop: k.ngayKhop } }));
     }, function (err) {
       pending(pfx, san, items, 'Chưa ghi được kết quả vào kho chung: ' + err.message);
     });
