@@ -16,6 +16,8 @@ var resultMissA = [], resultMissB = [], resultFiltered = [];
 var searchStrA = "", searchStrB = "";
 var pageA = 1, pageB = 1;
 // Tab con "Đã khớp kho": mã trong chứng từ có trong kho (cả mã đã khớp từ trước).
+// Thời gian của mọi đơn trong file sàn: để điền sẵn "Tuần đối soát" khi xuất.
+var allTimes = [];
 var resultKhop = [], searchStrC = '', pageC = 1, khopNote = null;
 var running = false;
 const pageSize = 10;
@@ -103,6 +105,7 @@ async function runMatchInner() {
 
   resultMissA = missA;
   resultMissB = missB;
+  allTimes = tikTokRecords.map(function (x) { return x.time; });
   resultFiltered = T.filtered;
   pageA = 1; pageB = 1;
   resultKhop = KhopKho.list(R, khoRows, T.khop); pageC = 1; searchStrC = ''; _$('searchC').value = '';
@@ -263,8 +266,7 @@ function renderTableA() {
   const pager = _$('pagerA');
   const filtered = resultMissA.filter(r => r.tid.toLowerCase().includes(searchStrA) || r.shop.toLowerCase().includes(searchStrA));
   _$('cntA').textContent = '('+filtered.length+')';
-  const btnExA = _$('btnExportA');
-  btnExA.style.display = resultMissA.length > 0 ? 'inline-flex' : 'none';
+  _$('actA').style.display = resultMissA.length > 0 ? 'flex' : 'none';
   if (!filtered.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="emo" aria-hidden="true">✅</span> Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
     pager.innerHTML = ''; return;
@@ -309,15 +311,9 @@ function renderTableB() {
   UI.renderPager(pager, pageB, totalPages, function(p){pageB=p; renderTableB();});
 }
 
-// "Sàn báo, kho chưa nhận" -> đúng bộ cột của file mẫu đơn thiếu.
-function exportExcelA() {
-  if (!resultMissA.length) { alert('Không có mã nào để xuất!'); return; }
-  var recs = resultMissA.map(function(r) {
-    return { tid: r.tid, shop: r.shop, typeLabel: TrangThai.loaiCuaDong(r), prod: r.prod, variant: r.variant };
-  });
-  UI.downloadWb(Template.buildExportWorkbook('tiktok', recs, new Date()),
-    'TikTok_chua_co_trong_kho_'+new Date().toISOString().slice(0,10)+'.xlsx');
-}
+// "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
+function exportExcelA() { return XuatThieu.xuat('tiktok', resultMissA, allTimes); }
+function copyTableA() { return XuatThieu.chep('tiktok', resultMissA, allTimes); }
 
 function exportExcelB() {
   // Ghi cả mã đã bị bộ lọc loại khỏi đối soát TikTok (vẫn nằm trong kho chung).
@@ -406,7 +402,7 @@ function init() {
   renderAll();
 }
 
-return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
+return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
          removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

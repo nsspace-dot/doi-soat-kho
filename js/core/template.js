@@ -1,10 +1,13 @@
 /* =====================================================================
-   Template — MỘT bộ cột dùng chung cho file mẫu "đơn thiếu" và file xuất
-   "Sàn báo, kho chưa nhận" của cả hai sàn:
+   Template — bộ cột của file mẫu "đơn thiếu" và file xuất "Sàn báo, kho
+   chưa nhận" của cả hai sàn.
+   File mẫu:
      Tuần đối soát | KHO | Mã vận đơn | Gian hàng <Sàn> | Loại tệp tin | Tên sản phẩm | Phân loại
-   - Cột 4 là "Gian hàng Shopee" ở tab Shopee, "Gian hàng TikTok" ở tab TikTok.
-   - Cột "KHO" người dùng tự điền tay: khi xuất để trống, khi nạp lại đọc nguyên văn.
-   - Cột "Mã vận đơn" khoá định dạng Text.
+     (cột 4 là "Gian hàng Shopee" ở tab Shopee, "Gian hàng TikTok" ở tab TikTok)
+   File xuất / "Chép bảng" (đúng thứ tự cột của Google Sheet theo dõi):
+     Tuần đối soát | KHO | Mã vận đơn | Gian hàng | Loại tệp tin | Tên sản phẩm | Phân loại |
+     Thời gian trả trên hệ thống | ĐVVC | Lý do
+   - Cột "Mã vận đơn" khoá định dạng Text. Nạp lại nhận cả hai bộ cột.
    ===================================================================== */
 (function (root, factory) {
   var api = factory(root.Common || (typeof require === 'function' ? require('./common.js') : null));
@@ -28,6 +31,11 @@
 
   var COL_WIDTHS = [{ wch: 14 }, { wch: 14 }, { wch: 26 }, { wch: 24 }, { wch: 28 }, { wch: 40 }, { wch: 24 }];
 
+  // Bộ cột file xuất "Sàn báo, kho chưa nhận": dán thẳng vào Google Sheet theo dõi.
+  var EXPORT_COLS = ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại',
+    'Thời gian trả trên hệ thống', 'ĐVVC', 'Lý do'];
+  var EXPORT_WIDTHS = COL_WIDTHS.concat([{ wch: 24 }, { wch: 16 }, { wch: 30 }]);
+
   function exampleRow(platform, date) {
     return [Common.isoWeekLabel(date), '', EXAMPLE_CODE,
       '(Ví dụ) Tên gian hàng',
@@ -35,7 +43,7 @@
       '(Ví dụ) Xoá dòng này rồi điền đơn sàn báo nhưng kho chưa nhận', '(Ví dụ) Màu đỏ, size M'];
   }
 
-  function sheetFromAoa(aoa, blankTextRows) {
+  function sheetFromAoa(aoa, blankTextRows, widths) {
     var XL = Common.xlsx();
     var ws = XL.utils.aoa_to_sheet(aoa);
     Common.forceTextCol(ws, CODE_COL_IDX);
@@ -49,7 +57,7 @@
       rg.e.r = last + blankTextRows;
       ws['!ref'] = XL.utils.encode_range(rg);
     }
-    ws['!cols'] = COL_WIDTHS;
+    ws['!cols'] = widths || COL_WIDTHS;
     return ws;
   }
 
@@ -62,18 +70,32 @@
   }
 
   /* records: các dòng "sàn báo, kho chưa nhận" (resultMissA) đã chuẩn hoá:
-     { tid, shop, typeLabel, prod, variant }                                 */
-  function buildExportWorkbook(platform, records, date) {
-    var XL = Common.xlsx();
-    var week = Common.isoWeekLabel(date || new Date());
-    var aoa = [columns(platform)];
-    records.forEach(function (r) {
-      aoa.push([week, '', String(r.tid), r.shop || '', r.typeLabel || '', r.prod || '', r.variant || '']);
+     { tid, shop, typeLabel, prod, variant, kho, time, dvvc, lyDo }
+     tuan: nhãn "Tuần đối soát" người dùng xác nhận, vd "02/11 - 08/11".      */
+  function exportAoa(records, tuan) {
+    var aoa = [EXPORT_COLS.slice()];
+    (records || []).forEach(function (r) {
+      aoa.push([tuan || '', r.kho || '', String(r.tid), r.shop || '', r.typeLabel || '', r.prod || '', r.variant || '',
+        r.time || '', r.dvvc || '', r.lyDo || '']);
     });
-    var ws = sheetFromAoa(aoa, 0);
+    return aoa;
+  }
+  function buildExportWorkbook(platform, records, tuan) {
+    var XL = Common.xlsx();
+    var ws = sheetFromAoa(exportAoa(records, tuan), 0, EXPORT_WIDTHS);
     var wb = XL.utils.book_new();
     XL.utils.book_append_sheet(wb, ws, platform === 'shopee' ? 'Shopee_chua_ve_kho' : 'TikTok_Lech_Kho');
     return wb;
+  }
+  // Bảng dạng TSV (có dòng tiêu đề) để dán thẳng vào Google Sheets / Excel.
+  // Ô có tab, xuống dòng hoặc ngoặc kép được bọc trong ngoặc kép.
+  function toTsv(aoa) {
+    return (aoa || []).map(function (row) {
+      return row.map(function (v) {
+        v = String(v === null || v === undefined ? '' : v);
+        return /["\t\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+      }).join('\t');
+    }).join('\n');
   }
 
   function templateFileName(platform) {
@@ -120,8 +142,9 @@
   }
 
   return {
-    columns: columns, CODE_COL_IDX: CODE_COL_IDX, EXAMPLE_CODE: EXAMPLE_CODE,
+    columns: columns, CODE_COL_IDX: CODE_COL_IDX, EXAMPLE_CODE: EXAMPLE_CODE, EXPORT_COLS: EXPORT_COLS,
     buildTemplateWorkbook: buildTemplateWorkbook, buildExportWorkbook: buildExportWorkbook,
+    exportAoa: exportAoa, toTsv: toTsv,
     templateFileName: templateFileName, isListHeader: isListHeader, readListRows: readListRows
   };
 });

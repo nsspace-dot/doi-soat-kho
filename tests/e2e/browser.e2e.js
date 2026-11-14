@@ -167,10 +167,10 @@ async function main() {
     step('Shopee: tải file mẫu đúng bộ cột');
 
     await page.setInputFiles('#sp_inp1', [xlsxFile('Shop_A.xlsx', [
-      ['Mã đơn hàng', 'Mã vận đơn', 'Đơn vị vận chuyển', 'Tên sản phẩm', 'Tên phân loại hàng', 'Tổng giá trị đơn hàng', 'Tỉnh/Thành phố'],
-      ['DH1', '862330000001', 'J&T', 'Lịch 2027', 'Đỏ', '135150.00', 'Hà Nội'],
-      ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM'],
-      ['DH3', 'SPXVN99999999', 'SPX', 'Quần', 'L', '70000.00', 'HCM']
+      ['Mã đơn hàng', 'Mã vận đơn', 'Đơn vị vận chuyển', 'Tên sản phẩm', 'Tên phân loại hàng', 'Tổng giá trị đơn hàng', 'Tỉnh/Thành phố', 'Ngày đặt hàng'],
+      ['DH1', '862330000001', 'J&T', 'Lịch 2027', 'Đỏ', '135150.00', 'Hà Nội', '2026-11-02 09:00'],
+      ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM', '2026-11-05 09:00'],
+      ['DH3', 'SPXVN99999999', 'Nhanh-SPX Express', 'Quần', 'L', '70000.00', 'HCM', '2026-11-08 09:00']
     ])]);
     // Nhãn của file: gian đoán từ tên file, loại file đoán sẵn — sửa được
     assert.equal(await page.inputValue('#sp_list1 .file-gian'), 'Shop A');
@@ -219,14 +219,31 @@ async function main() {
     await page.click('#sp_btn-tabA');
     step('Shopee: xác nhận "Sẽ chuyển N mã sang Đã khớp", mã khớp chuyển trạng thái (không xoá), tab con "Đã khớp kho (2)" có tìm, phân trang, xuất Excel theo ô tìm, lịch sử không tên');
 
-    const exA = await readDownload(page, () => page.click('#sp_btnExportA'));
-    const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1 });
-    assert.equal(exRows[0][3], 'Gian hàng Shopee');
-    assert.match(exRows[1][0], /^Tuần \d+\/\d{4}$/);
-    assert.equal(exRows[1][1] || '', '');
-    assert.deepEqual(exRows[1].slice(2), ['SPXVN99999999', 'Shop A', 'Đơn hàng', 'Quần', 'L']);
+    // Bảng "Sàn báo, kho chưa nhận" có thêm cột ĐVVC + Lý do
+    assert.deepEqual(await page.$$eval('#sp_tabA thead th', (t) => t.map((x) => x.textContent)),
+      ['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn', 'Mã đơn hàng', 'Tên sản phẩm', 'Tỉnh/Thành', 'KHO', 'ĐVVC', 'Lý do']);
+    assert.match(await page.locator('#sp_tbodyA tr').first().innerText(), /SPXVN99999999.*Chưa rõ\s+SPX Express\s+Giao thất bại/s);
+    // Nút xuất hỏi "Tuần đối soát": điền sẵn theo ngày trong file, sửa được
+    await page.click('#sp_btnExportA');
+    await page.locator('.modal', { hasText: 'Tuần đối soát' }).waitFor();
+    assert.equal(await page.inputValue('.modal-input'), '02/11 - 08/11', 'điền sẵn theo khoảng ngày trong file');
+    await page.screenshot({ path: path.join(OUT, '4c-hoi-tuan-doi-soat.png') });
+    await page.fill('.modal-input', '03/11 - 09/11');
+    const exA = await readDownload(page, () => modalClick(page, 'Xuất Excel'));
+    const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1, defval: '' });
+    assert.deepEqual(exRows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại',
+      'Thời gian trả trên hệ thống', 'ĐVVC', 'Lý do']);
+    assert.deepEqual(exRows[1], ['03/11 - 09/11', 'Chưa rõ', 'SPXVN99999999', 'Shop A', 'Đơn hàng', 'Quần', 'L', '2026-11-08 09:00', 'SPX Express', 'Giao thất bại']);
     assert.equal(exA.wb.Sheets[exA.wb.SheetNames[0]].C2.z, '@');
-    step('Shopee: xuất "Sàn báo, kho chưa nhận" đúng bộ cột, tuần ISO, KHO trống');
+    // Chép bảng: TSV có tiêu đề, nhớ tuần vừa nhập
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.click('#sp_btnCopyA');
+    assert.equal(await page.inputValue('.modal-input'), '03/11 - 09/11', 'nhớ tuần vừa nhập');
+    await modalClick(page, 'Chép bảng');
+    await page.locator('#toast.show', { hasText: 'Đã chép 1 dòng' }).waitFor();
+    const tsv = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((l) => l.split('\t'));
+    assert.deepEqual(tsv, exRows.slice(0, 2), 'TSV giống hệt file Excel');
+    step('Shopee: bảng có cột ĐVVC + Lý do; xuất hỏi "Tuần đối soát", file đúng 10 cột của bảng theo dõi; "Chép bảng" ra TSV có tiêu đề');
 
     // Đối soát lại cùng file: mã đã khớp vẫn tính là khớp, không hỏi, không đổi ngày khớp / nhãn cũ
     const before1 = row(ctl, '862330000001').join('|');
@@ -274,11 +291,17 @@ async function main() {
     await page.click('#tt_btn-tabA');
     step('TikTok: huỷ không đổi kho; ghi lại chỉ chuyển mã TikTok, GY bị lọc vẫn Chờ đối soát, gian sửa tay đi theo mã');
 
-    const ttA = await readDownload(page, () => page.click('#tt_btnExportA'));
-    const ttRows = XLSX.utils.sheet_to_json(ttA.wb.Sheets[ttA.wb.SheetNames[0]], { header: 1 });
-    assert.deepEqual(ttRows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng TikTok', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại']);
-    assert.equal(ttRows[1][2], '862330000077');
-    step('TikTok: xuất đúng bộ cột "Gian hàng TikTok"');
+    assert.deepEqual(await page.$$eval('#tt_tabA thead th', (t) => t.map((x) => x.textContent)),
+      ['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn (Tracking ID)', 'KHO', 'ĐVVC', 'Lý do']);
+    assert.match(await page.locator('#tt_tbodyA tr').first().innerText(), /862330000077\s+VL\s*đoán\s+J&T Express/);
+    await page.click('#tt_btnExportA');
+    await page.locator('.modal', { hasText: 'Tuần đối soát' }).waitFor();
+    assert.match(await page.inputValue('.modal-input'), /^\d{2}\/\d{2} - \d{2}\/\d{2}$/, 'file không có ngày: lấy tuần T2-CN vừa qua');
+    const ttA = await readDownload(page, () => modalClick(page, 'Xuất Excel'));
+    const ttRows = XLSX.utils.sheet_to_json(ttA.wb.Sheets[ttA.wb.SheetNames[0]], { header: 1, defval: '' });
+    assert.equal(ttRows[0].length, 10);
+    assert.deepEqual(ttRows[1].slice(1), ['VL', '862330000077', 'Gian Một', 'Giao KTC', 'Lịch', 'Vàng', '', 'J&T Express', '']);
+    step('TikTok: bảng có cột ĐVVC + Lý do, xuất đúng 10 cột (kho đoán theo tên SP)');
 
     /* ---- Tab Đã đối soát ---- */
     await page.click('#platBtn_ds');

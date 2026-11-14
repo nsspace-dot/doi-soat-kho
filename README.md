@@ -54,16 +54,22 @@ Giá trị đoán có nhãn *đoán* bên cạnh.
 
 ## File mẫu đơn thiếu và file xuất
 
-Một bộ cột duy nhất, đúng thứ tự:
+File mẫu (nút **Tải file mẫu**, mỗi tab sàn): tiêu đề + 1 dòng ví dụ (mã `012345678901`, tự bỏ qua khi nạp lại).
 
 ```
 Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee/TikTok | Loại tệp tin | Tên sản phẩm | Phân loại
 ```
 
-- Nút **Tải file mẫu** (mỗi tab sàn): tiêu đề + 1 dòng ví dụ (mã `012345678901`, tự bỏ qua khi nạp lại).
-- Nút **Xuất "Sàn báo, kho chưa nhận"**: cùng bộ cột, `Tuần đối soát` = tuần ISO ngày xuất (vd `Tuần 44/2026`), cột `KHO` để trống.
+File xuất **"Sàn báo, kho chưa nhận"**: đúng thứ tự cột của Google Sheet theo dõi, dán thẳng vào được.
+
+```
+Tuần đối soát | KHO | Mã vận đơn | Gian hàng | Loại tệp tin | Tên sản phẩm | Phân loại | Thời gian trả trên hệ thống | ĐVVC | Lý do
+```
+
+- Nút xuất hỏi **Tuần đối soát**: điền sẵn theo khoảng ngày trong file (dạng `02/11 - 08/11`), sửa được; file không có ngày thì lấy tuần Thứ Hai - Chủ Nhật vừa qua.
+- Nút **📋 Chép bảng**: chép cùng bảng đó dạng TSV có tiêu đề, dán thẳng vào Google Sheets.
 - Cột `Mã vận đơn` luôn khoá định dạng Text, nên Excel không đổi mã 12 số thành `8.6233E+11`.
-- Khi nạp lại: nhận cả `Gian hàng Shopee` lẫn `Gian hàng TikTok`, đọc cột `KHO` nguyên văn, và vẫn nhận file xuất cũ của công cụ gốc.
+- Khi nạp lại: nhận cả hai bộ cột (`Gian hàng`, `Gian hàng Shopee`, `Gian hàng TikTok`), đọc lại `KHO`, `ĐVVC`, `Lý do`, và vẫn nhận file xuất cũ của công cụ gốc.
 
 ## Cấu trúc
 
@@ -85,6 +91,7 @@ js/core/                logic thuần, không đụng DOM, có test
 js/api.js               gọi Web app + giữ bản kho mới nhất
 js/ui.js                toast, hộp thoại, phân trang, kéo thả, tên người dùng
 js/kho-sync.js          tải kho trước khi đối soát, xác nhận và xoá mã đã khớp
+js/xuat-thieu.js        nút xuất / chép của danh sách "Sàn báo, kho chưa nhận" (hỏi Tuần đối soát)
 js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, app.js   giao diện từng tab
 apps-script/Code.gs     backend Google Apps Script
 tests/                  test Node (node --test) + e2e Playwright

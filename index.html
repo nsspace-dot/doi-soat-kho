@@ -294,10 +294,13 @@
             <h3 class="section-label" style="margin:0">Sàn báo, kho chưa nhận</h3>
             <input type="text" class="table-search" id="sp_searchA" placeholder="Tìm mã vận đơn / gian hàng..." aria-label="Tìm" oninput="SP.handleSearchA()">
           </div>
-          <button class="btn-export" id="sp_btnExportA" onclick="SP.exportExcelA()" style="display:none">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Xuất "Sàn báo, kho chưa nhận"
-          </button>
+          <div class="btn-row" id="sp_actA" style="display:none">
+            <button class="btn-export" id="sp_btnCopyA" onclick="SP.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
+            <button class="btn-export" id="sp_btnExportA" onclick="SP.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất "Sàn báo, kho chưa nhận"
+            </button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -462,10 +465,13 @@
             <h3 class="section-label" style="margin:0">Sàn báo, kho chưa nhận</h3>
             <input type="text" class="table-search" id="tt_searchA" placeholder="Tìm mã vận đơn..." aria-label="Tìm" oninput="TT.handleSearchA()">
           </div>
-          <button class="btn-export" id="tt_btnExportA" onclick="TT.exportExcelA()" style="display:none">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Xuất "Sàn báo, kho chưa nhận"
-          </button>
+          <div class="btn-row" id="tt_actA" style="display:none">
+            <button class="btn-export" id="tt_btnCopyA" onclick="TT.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
+            <button class="btn-export" id="tt_btnExportA" onclick="TT.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất "Sàn báo, kho chưa nhận"
+            </button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -575,6 +581,7 @@
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/kho-sync.js"></script>
+<script src="js/xuat-thieu.js"></script>
 <script src="js/kho-tab.js"></script>
 <script src="js/shopee.js"></script>
 <script src="js/tiktok.js"></script>

@@ -41,7 +41,7 @@ for (const platform of ['shopee', 'tiktok']) {
 }
 
 test('Mã 12 số trong file xuất: ô kiểu chữ + numFmt 49 (Text) để Excel không đổi thành 8.6233E+11', () => {
-  const wb = Template.buildExportWorkbook('tiktok', [{ tid: '862330123456', shop: 'G', typeLabel: 'Giao không thành công', prod: 'P', variant: 'V' }], D);
+  const wb = Template.buildExportWorkbook('tiktok', [{ tid: '862330123456', shop: 'G', typeLabel: 'Giao không thành công', prod: 'P', variant: 'V' }], '02/11 - 08/11');
   const buf = writeBuffer(wb);
   const sheet = zipFile(buf, 'xl/worksheets/sheet1.xml');
   const cell = sheet.match(/<c r="C2"[^>]*>.*?<\/c>/)[0];
@@ -53,17 +53,21 @@ test('Mã 12 số trong file xuất: ô kiểu chữ + numFmt 49 (Text) để Ex
 });
 
 for (const platform of ['shopee', 'tiktok']) {
-  test('Xuất "Sàn báo, kho chưa nhận" ' + platform + ': đúng bộ cột, tuần ISO, KHO trống', () => {
+  test('Xuất "Sàn báo, kho chưa nhận" ' + platform + ': đúng 10 cột của bảng theo dõi, tuần do người dùng nhập', () => {
     const recs = [
-      { tid: '862330123456', shop: 'Gian A', typeLabel: 'Loại 1', prod: 'Lịch', variant: 'Đỏ' },
-      { tid: 'SPXVN0001', shop: 'Gian B', typeLabel: 'Loại 2', prod: '', variant: '' }
+      { tid: '862330123456', shop: 'Gian A', typeLabel: 'Trả hàng', prod: 'Lịch | Tranh', variant: 'Đỏ', kho: 'NVS',
+        time: '04/11/2026 10:00', dvvc: 'J&T Express', lyDo: 'Đổi ý' },
+      { tid: 'SPXVN0001', shop: 'Gian B', typeLabel: 'Giao KTC', prod: '', variant: '' }
     ];
-    const back = roundTrip(Template.buildExportWorkbook(platform, recs, D));
-    const rows = XLSX.utils.sheet_to_json(back.Sheets[back.SheetNames[0]], { header: 1, defval: '' });
-    assert.deepEqual(rows[0], Template.columns(platform));
-    assert.deepEqual(rows[1], ['Tuần 44/2026', '', '862330123456', 'Gian A', 'Loại 1', 'Lịch', 'Đỏ']);
+    const back = roundTrip(Template.buildExportWorkbook(platform, recs, '02/11 - 08/11'));
+    const ws = back.Sheets[back.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    assert.deepEqual(rows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại',
+      'Thời gian trả trên hệ thống', 'ĐVVC', 'Lý do']);
+    assert.deepEqual(rows[1], ['02/11 - 08/11', 'NVS', '862330123456', 'Gian A', 'Trả hàng', 'Lịch | Tranh', 'Đỏ', '04/11/2026 10:00', 'J&T Express', 'Đổi ý']);
     assert.equal(rows.length, 3);
-    assert.ok(!rows[0].includes('Ghi chú / Lý do'));
+    assert.equal(ws.C2.t, 's');
+    assert.equal(ws.C2.z, '@', 'mã vận đơn dạng chữ');
   });
 }
 
@@ -121,8 +125,20 @@ test('Vẫn nhận file xuất CŨ của tool gốc (TikTok và Shopee)', () => 
   assert.deepEqual(sp.records.map((r) => [r.tid, r.shop, r.typeLabel]), [['862330000001', 'Gian SP cũ', 'Khiếu nại trả hàng']]);
 });
 
-test('Xuất rồi nạp lại: mã 12 số bắt đầu bằng 0 giữ nguyên', () => {
-  const wb = roundTrip(Template.buildExportWorkbook('tiktok', [{ tid: '012345678999', shop: 'G' }], D));
-  const res = TikTokCore.match({ files: [{ wb, shop: 'f', ftype: 'exported' }], khoItems: [] });
-  assert.equal(res.records[0].tid, '012345678999');
+test('Xuất rồi nạp lại: mã 12 số bắt đầu bằng 0 giữ nguyên; KHO, ĐVVC, Lý do, thời gian đọc lại được', () => {
+  const wb = roundTrip(Template.buildExportWorkbook('tiktok', [{ tid: '012345678999', shop: 'G', typeLabel: 'Trả hàng', kho: 'TSN',
+    dvvc: 'Viettel Post', lyDo: 'Đổi ý', time: '04/11/2026 10:00' }], '02/11 - 08/11'));
+  for (const res of [TikTokCore.match({ files: [{ wb, shop: 'f', ftype: 'exported' }], khoItems: [] }),
+    ShopeeCore.match({ files: [{ wb, kind: 'don', shop: 'f' }], khoItems: [] })]) {
+    const r = res.records[0];
+    assert.deepEqual([r.tid, r.shop, r.kho, r.khoNguon, r.dvvcTen, r.dvvcNguon, r.lyDo, r.time, r.week],
+      ['012345678999', 'G', 'TSN', 'file', 'Viettel Post', 'file', 'Đổi ý', '04/11/2026 10:00', '02/11 - 08/11']);
+  }
+});
+
+test('Chép bảng: TSV có tiêu đề, ô có tab / xuống dòng / ngoặc kép được bọc ngoặc kép', () => {
+  const tsv = Template.toTsv(Template.exportAoa([{ tid: '012345678999', shop: 'G', typeLabel: 'Trả hàng', prod: 'A\nB "x"', kho: 'VL' }], '02/11 - 08/11'));
+  const lines = tsv.split('\n');
+  assert.equal(lines[0], Template.EXPORT_COLS.join('\t'));
+  assert.equal(tsv.slice(lines[0].length + 1), '02/11 - 08/11\tVL\t012345678999\tG\tTrả hàng\t"A\nB ""x"""\t\t\t\t');
 });

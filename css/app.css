@@ -416,3 +416,4 @@ details.skipped pre { margin: 10px 0 0; white-space: pre-wrap; word-break: break
 /* ---- Nhận diện ĐVVC / Lý do / Kho ---- */
 .nd-doan { font-size: 13px; padding: 0 6px; margin-left: 4px; font-style: italic; }
 td.nd-lydo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.modal-input { width: 100%; min-width: 0; margin-top: 10px; font-weight: 700; }
