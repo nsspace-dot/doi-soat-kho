@@ -259,7 +259,7 @@ function renderTableA() {
   _$('cntA').textContent = '('+filtered.length+')';
   _$('btnExportA').style.display = resultMissA.length ? 'inline-flex' : 'none';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
     pager.innerHTML = ''; return;
   }
   var totalPages = Math.ceil(filtered.length/pageSize), start = (pageA-1)*pageSize;
@@ -269,9 +269,9 @@ function renderTableA() {
       '<td><span class="type-tag">'+esc(TrangThai.loaiCuaDong(r))+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td><code style="opacity:.7">'+esc(r.oid||'—')+'</code></td>'+
-      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">'+esc(r.prod||'—')+'</td>'+
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.prod||'')+'">'+esc(r.prod||'—')+'</td>'+
       '<td>'+esc(r.prov||'—')+'</td>'+
-      '<td>'+esc(r.kho||'—')+'</td></tr>';
+      UI.ndCells(r)+'</tr>';
   }).join('');
   UI.renderPager(pager, pageA, totalPages, function(p){ pageA=p; renderTableA(); });
 }

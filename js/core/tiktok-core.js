@@ -8,10 +8,10 @@
    ===================================================================== */
 (function (root, factory) {
   var req = typeof require === 'function' ? require : null;
-  var api = factory(root.Common || req('./common.js'), root.Template || req('./template.js'));
+  var api = factory(root.Common || req('./common.js'), root.Template || req('./template.js'), root.NhanDien || req('./nhan-dien.js'));
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.TikTokCore = api;
-})(typeof self !== 'undefined' ? self : this, function (Common, Template) {
+})(typeof self !== 'undefined' ? self : this, function (Common, Template, NhanDien) {
   'use strict';
   var findCol = Common.findCol, getCellStr = Common.getCellStr, isOtherPlatformId = Common.isOtherPlatformId,
       sanitizeTrackingId = Common.sanitizeTrackingId, isLikelyRealTrackingId = Common.isLikelyRealTrackingId;
@@ -141,8 +141,10 @@
       if (Template.isListHeader(hMap)) {
         Template.readListRows(ws, headerRow, hMap, shop || '(Xuất lại)').forEach(function (x) {
           if (filterOther && isOtherPlatformId(x.cleanTid)) { filteredIds.add(x.cleanTid); return; } // T2
+          var dvX = NhanDien.dvvc(x.dvvc, x.cleanTid), khoX = NhanDien.kho('tiktok', x.kho, x.prod);
           tikTokRecords.push({ shop: x.shop, type: 'exported', loai: item.loai, typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
-            prod: x.prod, variant: x.variant, refund: 0, ship: '', pay: '', prov: '', kho: x.kho, week: x.week });
+            prod: x.prod, variant: x.variant, refund: 0, ship: '', pay: '', prov: '', kho: khoX.nguon ? khoX.ten : '', week: x.week,
+            dvvcTen: dvX.ten, dvvcNguon: dvX.nguon, lyDo: x.lyDo, khoNguon: khoX.nguon, time: x.time });
         });
         return;
       }
@@ -169,14 +171,34 @@
       var refundIdx = findCol(hMap, ['order refund amount', 'số tiền hoàn trả']);
       if (refundIdx === undefined) refundIdx = findCol(hMap, ['order amount', 'tổng giá trị đơn']);
 
+      // Nhận diện ĐVVC / Lý do / Kho / thời gian.
+      // Giao KTC: "Shipping Provider Name" + "Cancel Reason". Trả hàng: không có cột ĐVVC -> đoán theo mã; "Return Reason" (dịch).
+      var ndDvvcIdx = ftype === 'giao' ? findCol(hMap, ['shipping provider name', 'shipping provider', 'đơn vị vận chuyển']) : undefined;
+      var ndLyDoIdx = ftype === 'giao' ? findCol(hMap, ['cancel reason', 'lý do hủy', 'lí do hủy'])
+                                       : findCol(hMap, ['return reason', 'lý do trả', 'lí do trả']);
+      var ndKhoIdx  = findCol(hMap, ['warehouse name', 'tên kho']);
+      var ndTimeIdx = ftype === 'giao'
+        ? findCol(hMap, ['cancelled time', 'canceled time', 'cancel time', 'thời gian hủy', 'created time', 'thời gian tạo'])
+        : findCol(hMap, ['time requested', 'requested time', 'request time', 'return time', 'thời gian yêu cầu', 'created time', 'thời gian tạo']);
+      var oidIdx = findCol(hMap, ['=order id', 'order id', 'mã đơn hàng'], ['return']);
+
       for (var row2 = dataStart; row2 <= range.e.r; row2++) {
         var tid2 = getCellStr(ws, row2, tidIdx);
         if (!isLikelyRealTrackingId(tid2)) continue;
         var cleanTid2 = sanitizeTrackingId(tid2);
         if (filterOther && isOtherPlatformId(cleanTid2)) { filteredIds.add(cleanTid2); continue; } // T2
+        var prodName = prodIdx !== undefined ? getCellStr(ws, row2, prodIdx) : '';
+        var nd = NhanDien.dvvc(ndDvvcIdx !== undefined ? getCellStr(ws, row2, ndDvvcIdx) : '', cleanTid2);
+        var ndKho = NhanDien.kho('tiktok', ndKhoIdx !== undefined ? NhanDien.khoTuTen(getCellStr(ws, row2, ndKhoIdx)) : '', prodName);
+        var lyDoRaw = ndLyDoIdx !== undefined ? getCellStr(ws, row2, ndLyDoIdx) : '';
         tikTokRecords.push({
           shop: shop, type: ftype, loai: item.loai, tid: tid2, cleanTid: cleanTid2,
-          prod:    prodIdx    !== undefined ? getCellStr(ws, row2, prodIdx)    : '',
+          oid: oidIdx !== undefined ? getCellStr(ws, row2, oidIdx) : '',
+          dvvcTen: nd.ten, dvvcNguon: nd.nguon,
+          lyDo: ftype === 'giao' ? lyDoRaw : NhanDien.dichLyDoTikTok(lyDoRaw),
+          kho: ndKho.nguon ? ndKho.ten : '', khoNguon: ndKho.nguon,
+          time: NhanDien.cellTime(ws, row2, ndTimeIdx),
+          prod:    prodName,
           variant: variantIdx !== undefined ? getCellStr(ws, row2, variantIdx) : '',
           refund:  refundIdx  !== undefined ? parseMoneyTikTok(getCellStr(ws, row2, refundIdx)) : 0, // T3
           ship:    shipIdx    !== undefined ? getCellStr(ws, row2, shipIdx)    : '',
@@ -188,13 +210,8 @@
 
     // ĐỐI SOÁT
     var cleanTikTokIds = new Set(tikTokRecords.map(function (r) { return r.cleanTid; }));
-    var seenMiss = new Set();
-    var missA = [];
-    tikTokRecords.forEach(function (rec) {
-      if (!doiSoatIds.has(rec.cleanTid) && !seenMiss.has(rec.cleanTid)) {
-        missA.push(rec); seenMiss.add(rec.cleanTid);
-      }
-    });
+    // Mỗi mã vận đơn 1 dòng; kiện nhiều SKU gộp tên sản phẩm bằng " | ".
+    var missA = NhanDien.gopTheoMa(tikTokRecords.filter(function (rec) { return !doiSoatIds.has(rec.cleanTid); }));
 
     // MissB: Kho chưa có TikTok — giữ ngày cũ của kho chung
     var missB = [];

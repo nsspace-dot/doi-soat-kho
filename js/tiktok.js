@@ -266,7 +266,7 @@ function renderTableA() {
   const btnExA = _$('btnExportA');
   btnExA.style.display = resultMissA.length > 0 ? 'inline-flex' : 'none';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="emo" aria-hidden="true">✅</span> Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="emo" aria-hidden="true">✅</span> Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
     pager.innerHTML = ''; return;
   }
   const totalPages = Math.ceil(filtered.length/pageSize);
@@ -277,7 +277,7 @@ function renderTableA() {
       '<td><span class="shop-tag">'+esc(r.shop)+'</span></td>'+
       '<td><span class="type-tag">'+esc(TrangThai.loaiCuaDong(r))+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
-      '<td>'+esc(r.kho||'—')+'</td></tr>';
+      UI.ndCells(r)+'</tr>';
   }).join('');
   UI.renderPager(pager, pageA, totalPages, function(p){pageA=p; renderTableA();});
 }

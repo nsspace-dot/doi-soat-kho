@@ -120,6 +120,15 @@ var UI = (function () {
     });
   }
 
+  /* ---------- 3 ô KHO · ĐVVC · Lý do của bảng "Sàn báo, kho chưa nhận" ---------- */
+  function doanTag(nguon) { return nguon === NhanDien.DOAN ? ' <span class="type-tag nd-doan">đoán</span>' : ''; }
+  function ndCells(r) {
+    var ly = r.lyDo || '';
+    return '<td>' + esc(r.kho || NhanDien.CHUA_RO) + doanTag(r.khoNguon) + '</td>' +
+      '<td>' + esc(r.dvvcTen || NhanDien.CHUA_RO) + doanTag(r.dvvcNguon) + '</td>' +
+      '<td class="nd-lydo" title="' + esc(ly) + '">' + esc(ly || '—') + '</td>';
+  }
+
   function fmtIso(iso) {
     var d = new Date(iso);
     return isNaN(d.getTime()) ? String(iso || '') : Common.fmtDT(d);
@@ -139,6 +148,6 @@ var UI = (function () {
     toast: toast, choose: choose, confirm: confirmBox, alert: alertBox, renderPager: renderPager,
     setupDropZone: setupDropZone, memSet: memSet, memGet: memGet, memDel: memDel,
     fmtIso: fmtIso, fileItemHtml: fileItemHtml, bindFileFields: bindFileFields,
-    downloadWb: downloadWb, guideHtml: guideHtml, esc: esc
+    downloadWb: downloadWb, guideHtml: guideHtml, esc: esc, ndCells: ndCells
   };
 })();

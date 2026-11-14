@@ -37,6 +37,21 @@ công tắc Sáng/Tối (6 biến thể). Lựa chọn lưu trong trình duyệt
 Màu của từng biến thể nằm trong `css/themes.css`; `css/app.css` chỉ dùng biến. Mọi cặp chữ/nền đạt tương phản ≥ 4.5:1
 (`tests/theme.test.js` kiểm tra).
 
+## Nhận diện ĐVVC, Lý do, Kho cho từng đơn
+
+Mọi đơn đọc từ file sàn được gắn thêm ĐVVC, Lý do, Kho (`js/core/nhan-dien.js`); danh sách "Sàn báo, kho chưa nhận" hiện thêm cột **ĐVVC** và **Lý do**.
+Giá trị đoán có nhãn *đoán* bên cạnh.
+
+| | ĐVVC | Lý do | Kho |
+| --- | --- | --- | --- |
+| Shopee giao thất bại | cột "Đơn Vị Vận Chuyển" (bỏ tiền tố Nhanh-, Hàng Cồng Kềnh-, Tiết kiệm-, Hỏa Tốc-) | "Giao thất bại" | cột "Tên kho hàng" → NVS / TSN / VL |
+| Shopee trả hàng | cột "Đơn vị vận chuyển trả hàng" (chiều về), trống thì đoán theo mã | cột "Lí do Trả hàng/Hoàn tiền" | "Chưa rõ" (không đoán) |
+| TikTok giao KTC | cột "Shipping Provider Name" | cột "Cancel Reason" | đoán theo tên SP |
+| TikTok trả hàng | đoán theo mã "Return Logistics Tracking ID" | cột "Return Reason" (dịch sang tiếng Việt) | đoán theo tên SP (tranh / liễn / khung → NVS, còn lại → VL) |
+
+Đoán ĐVVC theo mã: chứa `VTPVN` → Viettel Post; `SPXVN…` → SPX Express; `VNGH…` hoặc `GY` + 6 ký tự → GHN; `530` + 9 số → J&T Cargo;
+`85…`/`86…` đủ 12 số → J&T Express; còn lại "Chưa rõ". Mỗi mã vận đơn chỉ 1 dòng, kiện nhiều SKU gộp tên sản phẩm bằng ` | `.
+
 ## File mẫu đơn thiếu và file xuất
 
 Một bộ cột duy nhất, đúng thứ tự:
@@ -66,6 +81,7 @@ js/core/                logic thuần, không đụng DOM, có test
   trang-thai.js         mô hình trạng thái: mã cần chuyển 'khop', nhãn loại file, tìm một mã
   da-doi-soat.js        tab Đã đối soát: danh sách, bộ lọc, xuất Excel
   template.js           bộ cột file mẫu / file xuất, đọc lại file
+  nhan-dien.js          ĐVVC, Lý do, Kho cho từng đơn; gộp mỗi mã 1 dòng
 js/api.js               gọi Web app + giữ bản kho mới nhất
 js/ui.js                toast, hộp thoại, phân trang, kéo thả, tên người dùng
 js/kho-sync.js          tải kho trước khi đối soát, xác nhận và xoá mã đã khớp

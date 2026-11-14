@@ -98,6 +98,9 @@
     var varIdx = Common.findCol(hMap, ['phân loại']);
     var weekIdx = Common.findCol(hMap, ['tuần đối soát']);
     var khoIdx = Common.findCol(hMap, ['=kho']);
+    var dvvcIdx = Common.findCol(hMap, ['=đvvc', 'đvvc', 'đơn vị vận chuyển']);
+    var lyDoIdx = Common.findCol(hMap, ['=lý do', '=lí do', 'lý do', 'lí do']);
+    var timeIdx = Common.findCol(hMap, ['thời gian trả']);
     function cell(r, c) { return c === undefined ? '' : Common.getCellStr(ws, r, c); }
     var out = [];
     for (var r = headerRow + 1; r <= rg.e.r; r++) {
@@ -109,7 +112,8 @@
         tid: tid, cleanTid: clean,
         shop: (shopIdx !== undefined ? cell(r, shopIdx) : '') || fallbackShop || '(Xuất lại)',
         typeLabel: cell(r, typeIdx), prod: cell(r, prodIdx), variant: cell(r, varIdx),
-        week: cell(r, weekIdx), kho: cell(r, khoIdx)
+        week: cell(r, weekIdx), kho: cell(r, khoIdx),
+        dvvc: cell(r, dvvcIdx), lyDo: cell(r, lyDoIdx), time: cell(r, timeIdx)
       });
     }
     return out;
