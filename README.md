@@ -5,7 +5,7 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 
 > Hướng dẫn cài đặt và cách dùng hằng tuần: **[HUONG-DAN.md](HUONG-DAN.md)**.
 
-## Bốn tab
+## Năm tab
 
 | Tab | Việc làm |
 | --- | --- |
@@ -13,6 +13,8 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 | **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (mỗi file có ô **Gian hàng** và **Loại file**) → đối soát với kho chung → chuyển mã Shopee đã khớp sang **Đã khớp** (sau khi xác nhận) → tab con **"Đã khớp kho (N)"** liệt kê mọi mã trong chứng từ có trong kho (đánh dấu mã vừa khớp / đã khớp từ trước), có tìm mã và xuất Excel. |
 | **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này không bị đổi trạng thái). |
 | **Đã đối soát** | Bảng mã Đã khớp (sàn, gian, loại file, ngày đối soát, ngày khớp), lọc sàn / gian / tuần khớp / tìm mã, xuất Excel theo bộ lọc. |
+
+| **🖼 Báo cáo hình** | Dán bảng theo dõi đơn thiếu (Ctrl+V từ Google Sheets / Excel) hoặc chọn file xlsx / csv → tự vẽ thẻ báo cáo 820px màu cố định (TikTok đen → hồng, Shopee cam → đỏ) → **Tải PNG**, **Chép hình** (dán thẳng Zalo), **Chép bản chữ**. Nhận cột theo tên tiêu đề; nhớ bảng dán gần nhất trên máy (localStorage `doiSoat_baoCao_v1`). |
 
 Ô **Tìm một mã** ở đầu trang (mọi tab) cho biết mã đang Chờ đối soát / Đã khớp / Không có trong kho.
 Không đăng nhập, không ghi tên người: lịch sử chỉ có thời gian, hành động và số lượng.
@@ -77,6 +79,7 @@ Tuần đối soát | KHO | Mã vận đơn | Gian hàng | Loại tệp tin | T�
 index.html              trang duy nhất (4 tab)
 css/themes.css          6 bộ biến màu (3 chủ đề × Sáng/Tối)
 css/app.css             giao diện, chỉ dùng biến
+css/bao-cao.css         thẻ báo cáo hình: màu cố định, không theo chủ đề
 js/config.js            API_URL: chỗ duy nhất cần sửa sau khi deploy
 js/theme.js             chủ đề: nạp trong <head>, áp màu trước khi vẽ; hộp chọn 🎨
 js/core/                logic thuần, không đụng DOM, có test
@@ -87,18 +90,19 @@ js/core/                logic thuần, không đụng DOM, có test
   trang-thai.js         mô hình trạng thái: mã cần chuyển 'khop', nhãn loại file, tìm một mã
   da-doi-soat.js        tab Đã đối soát: danh sách, bộ lọc, xuất Excel
   template.js           bộ cột file mẫu / file xuất, đọc lại file
+  bao-cao.js            tab Báo cáo hình: đọc bảng dán (TSV), chuẩn hoá tuần / gian / loại / lý do, tính số liệu, bản chữ
   nhan-dien.js          ĐVVC, Lý do, Kho cho từng đơn; gộp mỗi mã 1 dòng
 js/api.js               gọi Web app + giữ bản kho mới nhất
 js/ui.js                toast, hộp thoại, phân trang, kéo thả, tên người dùng
 js/kho-sync.js          tải kho trước khi đối soát, xác nhận và xoá mã đã khớp
 js/xuat-thieu.js        nút xuất / chép của danh sách "Sàn báo, kho chưa nhận" (hỏi Tuần đối soát)
-js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, app.js   giao diện từng tab
+js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, bao-cao-tab.js, app.js   giao diện từng tab
 apps-script/Code.gs     backend Google Apps Script
 tests/                  test Node (node --test) + e2e Playwright
 goc/                    hai công cụ gốc, giữ lại để đối chiếu
 ```
 
-xlsx 0.18.5 và Chart.js 4.4.1 tải từ cdnjs như bản gốc. Không có bước build: sửa file rồi push là xong.
+xlsx 0.18.5, Chart.js 4.4.1 và html2canvas 1.4.1 (chụp thẻ báo cáo thành PNG) tải từ cdnjs, ghim phiên bản. Không có bước build: sửa file rồi push là xong.
 
 ## Chạy test
 

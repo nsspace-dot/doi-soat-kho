@@ -48,7 +48,9 @@ async function newPage(browser, port, configured, viewport) {
   page.on('pageerror', (e) => { throw e; });
   await page.route('https://cdnjs.cloudflare.com/**', (route) => {
     const u = route.request().url();
-    const file = u.includes('xlsx') ? path.join(ROOT, 'node_modules/xlsx/dist/xlsx.full.min.js') : path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.js');
+    const file = u.includes('xlsx') ? path.join(ROOT, 'node_modules/xlsx/dist/xlsx.full.min.js')
+      : u.includes('html2canvas') ? path.join(ROOT, 'node_modules/html2canvas/dist/html2canvas.min.js')
+      : path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.js');
     route.fulfill({ body: fs.readFileSync(file), contentType: 'text/javascript' });
   });
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
@@ -382,6 +384,100 @@ async function main() {
     assert.equal(await page.locator('#theme-toggle').count(), 0, 'đã bỏ nút sáng/tối cũ');
     assert.ok(await page.isVisible('#platBtn_kho .tab-ico'), 'Mèo con: tab có con vật');
     assert.match(await page.locator('#toast').innerText(), /^Xong rồi nè 🐻 /, 'Mèo con: thông báo thành công có con vật');
+
+    /* ---- Tab Báo cáo hình (dữ liệu giả) ---- */
+    await page.click('#platBtn_bc');
+    assert.ok(await page.isVisible('#bc_empty'));
+    const BC_H = ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại', 'Lý do'];
+    const BC_ROWS = [BC_H,
+      ['2/11 - 8/11', 'NVS', '860000000001', 'TikTok Tường Vip', 'Trả hàng hoàn tiền', 'Tranh treo tường A', 'Đỏ', 'Đổi ý'],
+      ['2/11 - 8/11', 'NVS', '860000000002', 'TƯỜNG VIP', 'Giao không thành công', 'Tranh treo tường A', '', 'Giao thất bại'],
+      ['2/11 - 8/11', 'NVS', '860000000007', 'TƯỜNG VIP', 'Trả hàng', 'Khung tranh C', '', 'Khác mô tả'],
+      ['2/11 - 8/11', 'VL', 'VTPVN00000003', 'NHÀ SÁCH', 'Trả hàng', 'Sách B\nbản đặc biệt', '', 'Lỗi/hỏng'],
+      ['2/11 - 8/11', 'VL', 'VTPVN00000003', 'TikTok Nhà Sách', 'Trả hàng', 'Sách B', '', 'Lỗi/hỏng'],
+      ['26/10 - 1/11', 'TSN', '530000000004', 'TikTok Nhà Sách', 'Giao KTC', 'Sách B', '', ''],
+      ['26/10 - 1/11', 'NVS', '860000000008', 'Tường Vip', 'Trả hàng', 'Tranh treo tường A', '', 'Hàng mẫu KOC'],
+      ['5/10 - 11/10', 'VL', 'SPXVN00000005', 'Tiktok Tranh Lịch', 'Trả hàng', 'Lịch D', '', 'Gửi sai hàng']];
+    const tsvOf = (rows) => rows.map((r) => r.map((v) => (/["\t\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v)).join('\t')).join('\n');
+    // Thiếu tiêu đề -> báo lỗi dễ hiểu
+    await page.fill('#bc_input', tsvOf(BC_ROWS.slice(1)));
+    await page.locator('#bc_err', { hasText: 'Không thấy dòng tiêu đề' }).waitFor();
+    assert.ok(!(await page.isVisible('#bc_out')));
+    await page.fill('#bc_input', tsvOf([BC_H, ['Tuần 44/2026', 'VL', '860000000001', 'G', 'Trả hàng', '', '', '']]));
+    await page.locator('#bc_err', { hasText: 'Không đọc được cột Tuần đối soát' }).waitFor();
+    // Dán bảng đúng -> tự vẽ
+    await page.fill('#bc_input', tsvOf(BC_ROWS));
+    await page.locator('#bc_card .bc-title').waitFor();
+    assert.ok(!(await page.isVisible('#bc_err')));
+    assert.equal(await page.textContent('#bc_info'), 'Đã đọc 8 dòng · 7 mã vận đơn · bỏ qua 1 mã trùng');
+    assert.equal(await page.textContent('#bc_card .bc-title'), '📦 BÁO CÁO ĐỐI SOÁT TIKTOK');
+    assert.equal(await page.textContent('#bc_card .bc-sub'), 'Tuần 02/11 - 08/11 · 2 gian hàng');
+    assert.deepEqual(await page.$$eval('#bc_card .bc-num', (e) => e.map((x) => x.innerText.replace(/\n+/g, '|'))),
+      ['Tuần này thiếu|4|3 Trả hàng / 1 Giao KTC', 'Tồn các tuần trước|3|2 Trả hàng / 1 Giao KTC', 'Tổng còn treo|7|5 Trả hàng / 2 Giao KTC']);
+    assert.deepEqual(await page.$$eval('#bc_card .bc-table tr', (trs) => trs.map((tr) => [...tr.children].map((c) => c.textContent))), [
+      ['Gian hàng', 'NVS', 'TSN', 'VL', 'Tổng'], ['TƯỜNG VIP', '3', '–', '–', '3'], ['NHÀ SÁCH', '–', '–', '1', '1'], ['Tổng theo kho', '3', '–', '1', '4']]);
+    assert.equal(await page.locator('#bc_card .bc-table td.heat').count(), 2);
+    assert.deepEqual(await page.$$eval('#bc_card .bc-ton-row', (e) => e.map((x) => x.querySelector('.bc-ton-w').textContent + '|' + x.querySelector('.bc-ton-n').textContent + '|' + [...x.querySelectorAll('.bc-chip')].map((c) => c.textContent).join(','))),
+      ['Tuần 26/10 - 01/11|2|NVS 1,TSN 1', 'Tuần 05/10 - 11/10|1|VL 1']);
+    assert.match(await page.locator('#bc_card .bc-ton-late').first().textContent(), /^quá \d+ ngày$/);
+    const sizes = await page.evaluate(() => {
+      const c = document.getElementById('bc_card'), cs = getComputedStyle(c);
+      const chip = (t) => getComputedStyle([...c.querySelectorAll('.bc-chip')].find((x) => x.textContent.startsWith(t))).borderTopColor;
+      return { w: c.offsetWidth, radius: cs.borderTopLeftRadius, head: getComputedStyle(c.querySelector('.bc-head')).backgroundImage,
+        nvs: chip('NVS'), tsn: chip('TSN'), vl: chip('VL'), body: getComputedStyle(c.querySelector('.bc-body')).backgroundColor };
+    });
+    assert.equal(sizes.w, 820);
+    assert.equal(sizes.radius, '20px');
+    assert.match(sizes.head, /rgb\(0, 0, 0\).*rgb\(255, 0, 80\)/, 'TikTok: đen -> hồng #ff0050');
+    assert.deepEqual([sizes.nvs, sizes.tsn, sizes.vl], ['rgb(249, 115, 22)', 'rgb(37, 99, 235)', 'rgb(124, 58, 237)'], 'NVS cam, TSN xanh dương, VL tím');
+    const cardText = await page.locator('#bc_card').innerText();
+    assert.match(cardText, /Tổng còn treo theo kho \(7 đơn\)/);
+    assert.match(cardText, /Lý do[\s\S]*Giao thất bại\s+2 \(29%\)/);
+    assert.match(cardText, /Sản phẩm còn treo nhiều nhất[\s\S]*1\.\s*Tranh treo tường A\s*3 đơn · 2 Trả hàng, 1 Giao KTC · NVS 3/);
+    assert.match(cardText, /👉 Ưu tiên kho NVS: 4\/7 đơn \(57%\)\. Đơn cũ nhất từ tuần 05\/10 - 11\/10\./);
+    assert.match(cardText, /🚚 Theo ĐVVC: J&T Express 4 · /);
+    await page.locator('#bc_card').screenshot({ path: path.join(OUT, 'bc-the-tiktok.png') });
+    // Bản chữ
+    await page.click('#bc_btnCopyText');
+    await page.locator('#toast.show', { hasText: 'Đã chép bản chữ' }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), [
+      'Báo cáo kết quả đối soát 02/11 - 08/11 tiktok',
+      'TIKTOK TƯỜNG VIP THIẾU 3 ĐƠN: 3 đơn kho NVS',
+      'TIKTOK NHÀ SÁCH THIẾU 1 ĐƠN: 1 đơn kho VL',
+      'Tồn các tuần trước: 3 đơn',
+      '- Tuần 26/10 - 01/11: 2 đơn (1 đơn kho NVS; 1 đơn kho TSN)',
+      '- Tuần 05/10 - 11/10: 1 đơn (1 đơn kho VL)',
+      'Tổng còn treo: 7 đơn (4 đơn kho NVS; 1 đơn kho TSN; 2 đơn kho VL)'].join('\n'));
+    // Tải PNG: scale 2 -> rộng 1640px
+    const [png] = await Promise.all([page.waitForEvent('download'), page.click('#bc_btnPng')]);
+    assert.equal(png.suggestedFilename(), 'Bao_cao_doi_soat_TikTok_02-11-08-11.png');
+    const pngBuf = fs.readFileSync(await png.path());
+    assert.equal(pngBuf.slice(1, 4).toString(), 'PNG');
+    assert.equal(pngBuf.readUInt32BE(16), 1640, 'PNG scale 2');
+    fs.writeFileSync(path.join(OUT, 'bc-tai-ve.png'), pngBuf);
+    // Chép hình vào bộ nhớ tạm
+    await page.click('#bc_btnCopyImg');
+    await page.locator('#toast.show', { hasText: /Đã chép hình|đã tải file PNG/ }).waitFor();
+    // Đổi sàn -> đổi màu đầu thẻ; nhớ dữ liệu + sàn sau khi tải lại trang
+    await page.click('.bc-san-btn[data-san="shopee"]');
+    assert.equal(await page.textContent('#bc_card .bc-title'), '📦 BÁO CÁO ĐỐI SOÁT SHOPEE');
+    assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('#bc_card .bc-head')).backgroundImage), /rgb\(242, 112, 29\).*rgb\(196, 0, 26\)/, 'Shopee: cam -> đỏ');
+    await page.locator('#bc_card').screenshot({ path: path.join(OUT, 'bc-the-shopee.png') });
+    const nho = JSON.parse(await page.evaluate(() => localStorage.getItem('doiSoat_baoCao_v1')));
+    assert.equal(nho.san, 'shopee');
+    assert.equal(nho.text, tsvOf(BC_ROWS), 'nhớ bảng dán gần nhất trên máy');
+    // Chọn file xlsx (cột đảo thứ tự, không có Lý do / Tên sản phẩm)
+    await page.setInputFiles('#bc_file', [xlsxFile('theo_doi.xlsx', BC_ROWS.map((r) => [r[2], r[0], r[4], r[3], r[1]]))]);
+    await page.locator('#bc_info', { hasText: 'Đã đọc 8 dòng · 7 mã vận đơn' }).waitFor();
+    const noOpt = await page.locator('#bc_card').innerText();
+    assert.ok(!/Lý do|Sản phẩm còn treo/.test(noOpt), 'không có cột thì không vẽ khối đó');
+    await page.click('.bc-san-btn[data-san="tiktok"]');
+    await page.fill('#bc_input', tsvOf(BC_ROWS));
+    await page.locator('#bc_card .bc-top').waitFor();
+    step('Báo cáo hình: báo lỗi thiếu tiêu đề / tuần, dán bảng tự vẽ thẻ 820px (gian × kho, tồn, lý do, top SP, ghi chú), bản chữ đúng mẫu, tải PNG scale 2, đổi sàn đổi màu, nhớ dữ liệu, đọc file xlsx');
+
+    await page.click('#platBtn_kho');
+
     // Thẻ "Tồn từ 7 ngày" tô cảnh báo khi có mã cũ
     ctl.gas.post({ action: 'upload', cheDo: 'gop', items: [{ ma: 'CU0000000001', ngay: '01/10/2026' }] });
     await page.click('#st_refresh');
@@ -470,14 +566,15 @@ async function main() {
       await page.keyboard.press('Escape');
       await page.locator('#themePanel').waitFor({ state: 'hidden' });
 
-      for (const t of ['kho', 'sp', 'tt', 'ds']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds', 'bc']) {
         await page.click('#platBtn_' + t);
         const r = await scanContrast(page);
         assert.ok(r.checked > 40, name + ' ' + t + ' quét ' + r.checked + ' phần tử');
         assert.deepEqual(r.fails, [], name + ' tab ' + t);
         const text = await visibleText(page);
         if (chuDe !== 'meo') assert.ok(!ANIMALS.test(text), name + ' ' + t + ': không được có con vật');
-        if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(text), name + ' ' + t + ': không emoji');
+        // Thẻ báo cáo hình (màu + biểu tượng cố định để gửi Zalo) được miễn quy định không emoji.
+        if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(t === 'bc' ? text.replace(/[📦👉🚚]/gu, '') : text), name + ' ' + t + ': không emoji');
         if (chuDe === 'meo') {
           const tables = await page.evaluate((t) => [...document.querySelectorAll('#pane_' + t + ' table, #pane_' + t + ' .chart-card')].map((e) => e.innerText).join(' '), t);
           assert.ok(!ANIMALS.test(tables), name + ': không con vật trong bảng/biểu đồ');
@@ -512,6 +609,10 @@ async function main() {
     // Lưu và khôi phục sau khi tải lại trang
     await page.reload();
     assert.equal(await page.getAttribute('html', 'data-theme'), 'toigian-dark');
+    await page.click('#platBtn_bc');
+    await page.locator('#bc_card .bc-title', { hasText: 'TIKTOK' }).waitFor();
+    assert.match(await page.inputValue('#bc_input'), /^Tuần đối soát\tKHO\tMã vận đơn/, 'Báo cáo hình: nhớ bảng dán gần nhất sau khi tải lại trang');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#bc_card .bc-body')).backgroundColor), 'rgb(255, 255, 255)', 'thẻ báo cáo màu cố định, không theo chủ đề tối');
     step('Tải lại trang: giữ chủ đề đã chọn');
 
     // Áp theme trước khi vẽ: data-theme đã có ngay khi DOM bắt đầu dựng
@@ -551,7 +652,7 @@ async function main() {
     await mobile.locator('#st_count', { hasText: /^\d+$/ }).waitFor();
     for (const [chuDe, cheDo] of VARIANTS) {
       await mobile.evaluate((t) => Theme.set(t), { chuDe, cheDo });
-      for (const t of ['kho', 'sp', 'tt', 'ds']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds', 'bc']) {
         await mobile.click('#platBtn_' + t);
         const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         assert.ok(over <= 0, chuDe + '-' + cheDo + ' tab ' + t + ' tràn ngang ' + over + 'px');

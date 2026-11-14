@@ -6,7 +6,7 @@ var App = (function () {
   var esc = Common.escapeHtml, fmtNum = Common.fmtNum;
   var WEEK_MS = 7 * 86400000;
   var TITLES = { kho: 'Kho / Đối soát — kho mã chung', sp: 'Đối soát đơn hàng trả — Shopee', tt: 'Đối soát đơn hàng trả — TikTok Shop',
-                 ds: 'Đã đối soát — mã đã khớp' };
+                 ds: 'Đã đối soát — mã đã khớp', bc: 'Báo cáo hình — dán bảng ra hình' };
 
   function $(id) { return document.getElementById(id); }
 
@@ -14,7 +14,7 @@ var App = (function () {
   function switchTab(p) {
     if (!TITLES[p]) p = 'kho';
     document.documentElement.setAttribute('data-tab', p);
-    ['kho', 'sp', 'tt', 'ds'].forEach(function (k) {
+    ['kho', 'sp', 'tt', 'ds', 'bc'].forEach(function (k) {
       $('pane_' + k).classList.toggle('active', k === p);
       var b = $('platBtn_' + k);
       b.classList.toggle('active', k === p);
@@ -94,7 +94,7 @@ var App = (function () {
     Kho.onChange(renderLookup);
     $('lookupInput').addEventListener('input', renderLookup);
     renderStatus();
-    KhoTab.init(); SP.init(); TT.init(); DsTab.init();
+    KhoTab.init(); SP.init(); TT.init(); DsTab.init(); BcTab.init();
     if (Api.configured()) Kho.refresh().catch(function () {});
   }
 

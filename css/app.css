@@ -8,6 +8,7 @@
 html[data-tab="sp"] { --accent: var(--sp); --on-accent: var(--on-sp); --accent-ink: var(--ink-sp); --accent-deep: var(--deep-sp); }
 html[data-tab="tt"] { --accent: var(--tt); --on-accent: var(--on-tt); --accent-ink: var(--ink-tt); --accent-deep: var(--deep-tt); }
 html[data-tab="ds"] { --accent: var(--ds); --on-accent: var(--on-ds); --accent-ink: var(--ink-ds); --accent-deep: var(--deep-ds); }
+html[data-tab="bc"] { --accent: var(--ok); --on-accent: var(--on-ok); --accent-ink: var(--ok-ink); --accent-deep: var(--ok-ink); }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
@@ -48,6 +49,7 @@ button, input, textarea, select { font-family: inherit; }
 .tab[data-tab="sp"] { --c: var(--sp); --on: var(--on-sp); }
 .tab[data-tab="tt"] { --c: var(--tt); --on: var(--on-tt); }
 .tab[data-tab="ds"] { --c: var(--ds); --on: var(--on-ds); }
+.tab[data-tab="bc"] { --c: var(--ok); --on: var(--on-ok); }
 .tab .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
 .tab .tab-ico { font-size: 18px; line-height: 1; }
 .tab:hover { border-color: var(--c); }
@@ -417,3 +419,13 @@ details.skipped pre { margin: 10px 0 0; white-space: pre-wrap; word-break: break
 .nd-doan { font-size: 13px; padding: 0 6px; margin-left: 4px; font-style: italic; }
 td.nd-lydo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
 .modal-input { width: 100%; min-width: 0; margin-top: 10px; font-weight: 700; }
+
+/* ---- Tab Báo cáo hình: phần công cụ (thẻ báo cáo màu cố định nằm ở css/bao-cao.css) ---- */
+.bc-input { min-height: 150px; white-space: pre; overflow: auto; }
+.bc-actions { margin-top: 12px; gap: 8px; }
+.bc-actions .file-summary { flex: 1; min-width: 200px; }
+#bc_err { margin-top: 12px; }
+.bc-san { display: inline-flex; border: var(--bw) solid var(--border-strong); border-radius: var(--radius-pill); overflow: hidden; }
+.bc-san-btn { padding: 0 16px; min-height: 36px; border: none; background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 700; cursor: pointer; }
+.bc-san-btn.active { background: var(--accent); color: var(--on-accent); }
+.bc-scroll { overflow-x: auto; padding-bottom: 6px; }
