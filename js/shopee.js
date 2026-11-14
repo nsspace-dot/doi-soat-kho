@@ -261,6 +261,7 @@ function renderTableA() {
   });
   _$('cntA').textContent = '('+filtered.length+')';
   _$('actA').style.display = resultMissA.length ? 'flex' : 'none';
+  XuatThieu.veTinNhan(_$('dvvcBox'), XuatThieu.dvvcItems('shopee', resultMissA, allTimes));
   if (!filtered.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="10"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
     pager.innerHTML = ''; return;
@@ -352,6 +353,7 @@ function switchTab(paneId, btn) {
 // "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
 function exportExcelA() { return XuatThieu.xuat('shopee', resultMissA, allTimes); }
 function copyTableA() { return XuatThieu.chep('shopee', resultMissA, allTimes); }
+function exportDvvc() { return XuatThieu.doiDvvc('shopee', resultMissA, allTimes); }
 
 function exportExcelB() {
   if (!resultMissB.length) { alert('Không có mã nào để xuất!'); return; }
@@ -382,7 +384,7 @@ function init() {
   renderAll();
 }
 
-return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
+return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportDvvc: exportDvvc, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
          removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

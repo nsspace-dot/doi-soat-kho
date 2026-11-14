@@ -305,6 +305,21 @@ async function main() {
     assert.deepEqual(ttRows[1].slice(1), ['VL', '862330000077', 'Gian Một', 'Giao KTC', 'Lịch', 'Vàng', '', 'J&T Express', '']);
     step('TikTok: bảng có cột ĐVVC + Lý do, xuất đúng 10 cột (kho đoán theo tên SP)');
 
+    // Đòi ĐVVC: file Excel + nút chép tin nhắn từng kho × ĐVVC
+    const dv = await readDownload(page, () => page.click('#tt_btnDvvc'));
+    assert.match(dv.name, /^Doi_DVVC_TikTok_\d{4}-\d{2}-\d{2}\.xlsx$/);
+    assert.deepEqual(dv.wb.SheetNames, ['Tổng hợp', 'Kho VL', 'Tin nhắn']);
+    assert.deepEqual(XLSX.utils.sheet_to_json(dv.wb.Sheets['Tổng hợp'], { header: 1 }).slice(0, 3), [['KHO \\ ĐVVC', 'J&T Express', 'Tổng'], ['VL', 1, 1], ['Tổng', 1, 1]]);
+    assert.deepEqual(XLSX.utils.sheet_to_json(dv.wb.Sheets['Kho VL'], { header: 1, defval: '' })[1].slice(0, 7), [1, '862330000077', 'J&T Express', 'Gian Một', 'Giao KTC', 'O3', 'Lịch']);
+    assert.equal(dv.wb.Sheets['Kho VL'].B2.z, '@');
+    await page.click('#tt_dvvcBox summary');
+    assert.match(await page.locator('#tt_dvvcBox .dvvc-row').innerText(), /KHO VL · J&T Express · 1 kiện \(1 giao KTC, 0 trả hàng\)/);
+    await page.click('#tt_dvvcBox .dvvc-copy');
+    await page.locator('#toast.show', { hasText: 'Đã chép tin nhắn [J&T Express] KHO VL' }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
+      '[J&T Express] KHO VL – nhờ kiểm tra & hoàn trả 1 kiện chưa về kho (1 giao không thành công, 0 trả hàng):\n862330000077');
+    step('Đòi ĐVVC (TikTok): file có Tổng hợp + sheet từng kho + Tin nhắn, nút "Chép tin nhắn" theo kho × ĐVVC');
+
     /* ---- Tab Đã đối soát ---- */
     await page.click('#platBtn_ds');
     await page.locator('#ds_count', { hasText: '3 / 3 mã đã khớp' }).waitFor();
@@ -455,6 +470,17 @@ async function main() {
     assert.equal(pngBuf.slice(1, 4).toString(), 'PNG');
     assert.equal(pngBuf.readUInt32BE(16), 1640, 'PNG scale 2');
     fs.writeFileSync(path.join(OUT, 'bc-tai-ve.png'), pngBuf);
+    // Đòi ĐVVC từ bảng đã dán
+    const bdv = await readDownload(page, () => page.click('#bc_btnDvvc'));
+    assert.deepEqual(bdv.wb.SheetNames, ['Tổng hợp', 'Kho NVS', 'Kho TSN', 'Kho VL', 'Tin nhắn']);
+    assert.equal(XLSX.utils.sheet_to_json(bdv.wb.Sheets['Tin nhắn'], { header: 1 }).length, 5, '4 nhóm kho × ĐVVC');
+    assert.equal(await page.locator('#bc_dvvcBox .dvvc-copy').count(), 4);
+    await page.click('#bc_dvvcBox summary');
+    await page.locator('#bc_dvvcBox .dvvc-copy').first().click();
+    await page.locator('#toast.show', { hasText: 'Đã chép tin nhắn [J&T Express] KHO NVS (4 kiện)' }).waitFor();
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()),
+      /^\[J&T Express\] KHO NVS – nhờ kiểm tra & hoàn trả 4 kiện chưa về kho \(1 giao không thành công, 3 trả hàng\):\n860000000001\n860000000002\n860000000007\n860000000008$/);
+    await page.screenshot({ path: path.join(OUT, 'bc-toan-tab.png'), fullPage: true });
     // Chép hình vào bộ nhớ tạm
     await page.click('#bc_btnCopyImg');
     await page.locator('#toast.show', { hasText: /Đã chép hình|đã tải file PNG/ }).waitFor();

@@ -42,5 +42,47 @@ var XuatThieu = (function () {
     else UI.alert('Chưa chép được', 'Trình duyệt không cho chép vào bộ nhớ tạm. Hãy dùng nút Xuất Excel.');
   }
 
-  return { recs: recs, tuanGoiY: tuanGoiY, hoiTuan: hoiTuan, xuat: xuat, chep: chep };
+  /* ---------- Đòi ĐVVC: file Excel + nút chép tin nhắn cho từng kho × ĐVVC ---------- */
+  // Dòng kết quả đối soát -> dòng của file đòi ĐVVC.
+  function dvvcItems(san, missA, times) {
+    var tuan = tuanGoiY(san, times);
+    return recs(missA).map(function (r) {
+      return { ma: r.tid, dvvc: r.dvvc, dvvcNguon: r.dvvcNguon, gian: r.shop, loai: r.typeLabel, maDon: r.oid, sp: r.prod,
+        lyDo: r.lyDo, tuan: r.week || tuan, kho: r.kho, khoNguon: r.khoNguon };
+    });
+  }
+  function xuatDvvc(tenSan, items) {
+    if (!items || !items.length) { UI.toast('Không có mã nào để xuất.'); return; }
+    UI.downloadWb(DoiDvvc.buildWorkbook(items), 'Doi_DVVC_' + tenSan + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  }
+  function doiDvvc(san, missA, times) { xuatDvvc(SAN[san], dvvcItems(san, missA, times)); }
+
+  // Vẽ khối "Tin nhắn đòi ĐVVC" vào box: mỗi kho × ĐVVC 1 dòng + nút "Chép tin nhắn".
+  function veTinNhan(box, items) {
+    var groups = DoiDvvc.nhom(items);
+    box._groups = groups;
+    box.hidden = !groups.length;
+    if (!groups.length) { box.innerHTML = ''; return; }
+    var esc = Common.escapeHtml, open = box.querySelector('details') && box.querySelector('details').open;
+    box.innerHTML = '<details class="help dvvc-box"' + (open ? ' open' : '') + '><summary><span class="emo" aria-hidden="true">🚚</span> Tin nhắn đòi ĐVVC (' +
+      groups.length + ' nhóm kho × ĐVVC)</summary><div class="help-body">' + groups.map(function (g, i) {
+        return '<div class="dvvc-row"><span><b>KHO ' + esc(g.kho) + '</b> · ' + esc(g.dvvc) + ' · ' + g.items.length + ' kiện (' + g.giao +
+          ' giao KTC, ' + g.tra + ' trả hàng)</span><button class="btn-export dvvc-copy" data-i="' + i + '"><span class="emo" aria-hidden="true">📋</span> Chép tin nhắn</button></div>';
+      }).join('') + '</div></details>';
+    if (!box._bound) {
+      box._bound = true;
+      box.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('.dvvc-copy') : null;
+        if (!b) return;
+        var g = box._groups[+b.getAttribute('data-i')];
+        UI.copyText(DoiDvvc.tinNhan(g)).then(function (ok) {
+          if (ok) UI.toast('Đã chép tin nhắn [' + g.dvvc + '] KHO ' + g.kho + ' (' + g.items.length + ' kiện).', 4000, 'ok');
+          else UI.alert('Chưa chép được', '<pre style="white-space:pre-wrap">' + esc(DoiDvvc.tinNhan(g)) + '</pre>');
+        });
+      });
+    }
+  }
+
+  return { recs: recs, tuanGoiY: tuanGoiY, hoiTuan: hoiTuan, xuat: xuat, chep: chep,
+           dvvcItems: dvvcItems, xuatDvvc: xuatDvvc, doiDvvc: doiDvvc, veTinNhan: veTinNhan };
 })();

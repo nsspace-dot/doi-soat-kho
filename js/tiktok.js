@@ -267,6 +267,7 @@ function renderTableA() {
   const filtered = resultMissA.filter(r => r.tid.toLowerCase().includes(searchStrA) || r.shop.toLowerCase().includes(searchStrA));
   _$('cntA').textContent = '('+filtered.length+')';
   _$('actA').style.display = resultMissA.length > 0 ? 'flex' : 'none';
+  XuatThieu.veTinNhan(_$('dvvcBox'), XuatThieu.dvvcItems('tiktok', resultMissA, allTimes));
   if (!filtered.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="emo" aria-hidden="true">✅</span> Tất cả mã vận đơn đều khớp dữ liệu Kho</td></tr>';
     pager.innerHTML = ''; return;
@@ -314,6 +315,7 @@ function renderTableB() {
 // "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
 function exportExcelA() { return XuatThieu.xuat('tiktok', resultMissA, allTimes); }
 function copyTableA() { return XuatThieu.chep('tiktok', resultMissA, allTimes); }
+function exportDvvc() { return XuatThieu.doiDvvc('tiktok', resultMissA, allTimes); }
 
 function exportExcelB() {
   // Ghi cả mã đã bị bộ lọc loại khỏi đối soát TikTok (vẫn nằm trong kho chung).
@@ -402,7 +404,7 @@ function init() {
   renderAll();
 }
 
-return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
+return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportDvvc: exportDvvc, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
          removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

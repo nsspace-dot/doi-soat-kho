@@ -429,3 +429,10 @@ td.nd-lydo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
 .bc-san-btn { padding: 0 16px; min-height: 36px; border: none; background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 700; cursor: pointer; }
 .bc-san-btn.active { background: var(--accent); color: var(--on-accent); }
 .bc-scroll { overflow-x: auto; padding-bottom: 6px; }
+
+/* ---- Tin nhắn đòi ĐVVC ---- */
+.dvvc-box { margin: 0 0 14px; }
+.dvvc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
+.dvvc-row + .dvvc-row { border-top: 1px solid var(--border); }
+.dvvc-row > span { color: var(--text); }
+.dvvc-row .btn-export { background: var(--surface); }

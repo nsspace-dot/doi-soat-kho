@@ -54,6 +54,13 @@ Giá trị đoán có nhãn *đoán* bên cạnh.
 Đoán ĐVVC theo mã: chứa `VTPVN` → Viettel Post; `SPXVN…` → SPX Express; `VNGH…` hoặc `GY` + 6 ký tự → GHN; `530` + 9 số → J&T Cargo;
 `85…`/`86…` đủ 12 số → J&T Express; còn lại "Chưa rõ". Mỗi mã vận đơn chỉ 1 dòng, kiện nhiều SKU gộp tên sản phẩm bằng ` | `.
 
+## Nút "🚚 Xuất file đòi ĐVVC"
+
+Có ở danh sách "Sàn báo, kho chưa nhận" (Shopee, TikTok) và ở tab Báo cáo hình (từ bảng đã dán). File Excel gồm:
+**Tổng hợp** (bảng kho × ĐVVC theo số kiện + ghi chú số kiện có ĐVVC / kho là đoán), **mỗi kho 1 sheet** nhóm theo ĐVVC
+(`STT | Mã vận đơn | ĐVVC | Gian | Loại | Mã đơn | Sản phẩm | Lý do | Tuần | Kho (thật/đoán)`, mã dạng chữ), và **Tin nhắn**
+(mỗi ô 1 tin soạn sẵn cho 1 kho × 1 ĐVVC). Trên trang, khối **Tin nhắn đòi ĐVVC** có nút **📋 Chép tin nhắn** cho từng kho × ĐVVC.
+
 ## File mẫu đơn thiếu và file xuất
 
 File mẫu (nút **Tải file mẫu**, mỗi tab sàn): tiêu đề + 1 dòng ví dụ (mã `012345678901`, tự bỏ qua khi nạp lại).
@@ -90,6 +97,7 @@ js/core/                logic thuần, không đụng DOM, có test
   trang-thai.js         mô hình trạng thái: mã cần chuyển 'khop', nhãn loại file, tìm một mã
   da-doi-soat.js        tab Đã đối soát: danh sách, bộ lọc, xuất Excel
   template.js           bộ cột file mẫu / file xuất, đọc lại file
+  doi-dvvc.js           file Excel + tin nhắn đòi ĐVVC (kho × ĐVVC)
   bao-cao.js            tab Báo cáo hình: đọc bảng dán (TSV), chuẩn hoá tuần / gian / loại / lý do, tính số liệu, bản chữ
   nhan-dien.js          ĐVVC, Lý do, Kho cho từng đơn; gộp mỗi mã 1 dòng
 js/api.js               gọi Web app + giữ bản kho mới nhất

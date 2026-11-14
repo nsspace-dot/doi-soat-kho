@@ -135,7 +135,16 @@ var BcTab = (function () {
     card.innerHTML = cardHtml(model);
     $('bc_empty').hidden = true;
     $('bc_out').hidden = false;
+    XuatThieu.veTinNhan($('bc_dvvcBox'), dvvcItems());
   }
+  // Bảng đã dán -> dòng của file đòi ĐVVC (kho lấy từ cột KHO của bảng).
+  function dvvcItems() {
+    return doc && doc.ok ? doc.items.map(function (x) {
+      return { ma: x.maGoc || x.ma, dvvc: x.dvvc, dvvcNguon: x.dvvcNguon, gian: x.gian, loai: x.loai, maDon: x.maDon, sp: x.sp,
+        lyDo: x.lyDo, tuan: x.tuan.label, kho: x.kho, khoNguon: NhanDien.FILE };
+    }) : [];
+  }
+  function xuatDvvc() { if (model) XuatThieu.xuatDvvc(model.sanLabel, dvvcItems()); }
   function save() {
     var text = $('bc_input').value;
     if (text.length > MAX_STORE) { UI.memSet(KEY, JSON.stringify({ san: san, text: '' })); return; }
@@ -218,6 +227,6 @@ var BcTab = (function () {
     render();
   }
 
-  return { init: init, setSan: setSan, clear: clear, taiPng: taiPng, chepHinh: chepHinh, chepChu: chepChu,
+  return { init: init, setSan: setSan, clear: clear, taiPng: taiPng, chepHinh: chepHinh, chepChu: chepChu, xuatDvvc: xuatDvvc,
            current: function () { return { doc: doc, model: model, san: san }; } };
 })();
