@@ -45,3 +45,13 @@ test('File Excel: Tổng hợp kho × ĐVVC + ghi chú đoán, mỗi kho 1 sheet
   assert.deepEqual(tn[2].slice(0, 3), ['VL', 'J&T Express', 3]);
   assert.match(tn[2][3], /^\[J&T Express\] KHO VL – nhờ kiểm tra & hoàn trả 3 kiện chưa về kho \(1 giao không thành công, 2 trả hàng\):\n860000000001\n/);
 });
+
+test('Xuất theo ĐVVC: mỗi ĐVVC 1 sheet (nhiều kiện trước), trong sheet nhóm theo kho; Tổng hợp và Tin nhắn giữ nguyên', () => {
+  const wb = roundTrip(DoiDvvc.buildWorkbook(ITEMS, 'dvvc'));
+  assert.deepEqual(wb.SheetNames, ['Tổng hợp', 'J&T Express', 'SPX Express', 'Viettel Post', 'Tin nhắn']);
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets['J&T Express'], { header: 1, defval: '' });
+  assert.deepEqual(rows.slice(1).map((r) => [r[0], r[1], r[2]]), [[1, '860000000001', 'J&T Express'], [2, '860000000002', 'J&T Express'], [3, '850000000003', 'J&T Express']]);
+  assert.equal(wb.Sheets['J&T Express'].B2.z, '@');
+  const mac = XLSX.utils.sheet_to_json(roundTrip(DoiDvvc.buildWorkbook(ITEMS)).Sheets['Tổng hợp'], { header: 1 });
+  assert.deepEqual(XLSX.utils.sheet_to_json(wb.Sheets['Tổng hợp'], { header: 1 }), mac);
+});

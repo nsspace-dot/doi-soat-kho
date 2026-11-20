@@ -51,11 +51,12 @@ var XuatThieu = (function () {
         lyDo: r.lyDo, tuan: r.week || tuan, kho: r.kho, khoNguon: r.khoNguon };
     });
   }
-  function xuatDvvc(tenSan, items) {
+  // theo: 'kho' (mỗi kho 1 sheet) | 'dvvc' (mỗi ĐVVC 1 sheet)
+  function xuatDvvc(tenSan, items, theo) {
     if (!items || !items.length) { UI.toast('Không có mã nào để xuất.'); return; }
-    UI.downloadWb(DoiDvvc.buildWorkbook(items), 'Doi_DVVC_' + tenSan + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    UI.downloadWb(DoiDvvc.buildWorkbook(items, theo), 'Doi_DVVC' + (theo === 'dvvc' ? '_theo_DVVC_' : '_') + tenSan + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
   }
-  function doiDvvc(san, missA, times) { xuatDvvc(SAN[san], dvvcItems(san, missA, times)); }
+  function doiDvvc(san, missA, times, theo) { xuatDvvc(SAN[san], dvvcItems(san, missA, times), theo); }
 
   // Vẽ khối "Tin nhắn đòi ĐVVC" vào box: mỗi kho × ĐVVC 1 dòng + nút "Chép tin nhắn".
   function veTinNhan(box, items) {

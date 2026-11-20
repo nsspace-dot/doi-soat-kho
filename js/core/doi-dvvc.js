@@ -53,7 +53,8 @@
     return t;
   }
 
-  function buildWorkbook(items) {
+  // theo: 'kho' (mặc định, mỗi kho 1 sheet) hoặc 'dvvc' (mỗi ĐVVC 1 sheet, trong sheet nhóm theo kho).
+  function buildWorkbook(items, theo) {
     var XL = Common.xlsx(), groups = nhom(items), wb = XL.utils.book_new();
     var khos = [], dvvcs = [], all = [];
     groups.forEach(function (g) {
@@ -87,9 +88,13 @@
     used['tin nhắn'] = true;
 
     /* ---- Mỗi kho 1 sheet, nhóm theo ĐVVC ---- */
-    khos.forEach(function (k) {
+    var theoDvvc = theo === 'dvvc';
+    var keys = theoDvvc ? dvvcs.slice().sort(function (a, b) {
+      return (a === NhanDien.CHUA_RO) - (b === NhanDien.CHUA_RO) || (tot[dvvcs.indexOf(b)] - tot[dvvcs.indexOf(a)]) || a.localeCompare(b, 'vi');
+    }) : khos;
+    keys.forEach(function (k) {
       var rows = [COT.slice()], stt = 0;
-      groups.filter(function (g) { return g.kho === k; }).forEach(function (g) {
+      groups.filter(function (g) { return (theoDvvc ? g.dvvc : g.kho) === k; }).forEach(function (g) {
         g.items.forEach(function (x) {
           rows.push([++stt, x.ma, x.dvvc, x.gian, x.loaiGoc || x.loai, x.maDon, x.sp, x.lyDo, x.tuan, khoNhan(x)]);
         });
@@ -98,7 +103,7 @@
       Common.forceTextCol(ws, 1);
       Common.forceTextCol(ws, 5);
       ws['!cols'] = [{ wch: 5 }, { wch: 24 }, { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 44 }, { wch: 28 }, { wch: 15 }, { wch: 15 }];
-      XL.utils.book_append_sheet(wb, ws, tenSheet('Kho ' + k, used));
+      XL.utils.book_append_sheet(wb, ws, tenSheet((theoDvvc ? '' : 'Kho ') + k, used));
     });
 
     /* ---- Tin nhắn: mỗi ô 1 tin cho 1 kho × 1 ĐVVC ---- */

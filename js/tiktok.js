@@ -315,7 +315,7 @@ function renderTableB() {
 // "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
 function exportExcelA() { return XuatThieu.xuat('tiktok', resultMissA, allTimes); }
 function copyTableA() { return XuatThieu.chep('tiktok', resultMissA, allTimes); }
-function exportDvvc() { return XuatThieu.doiDvvc('tiktok', resultMissA, allTimes); }
+function exportDvvc(theo) { return XuatThieu.doiDvvc('tiktok', resultMissA, allTimes, theo); }
 
 function exportExcelB() {
   // Ghi cả mã đã bị bộ lọc loại khỏi đối soát TikTok (vẫn nằm trong kho chung).

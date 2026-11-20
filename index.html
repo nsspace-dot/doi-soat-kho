@@ -298,7 +298,8 @@
             <input type="text" class="table-search" id="sp_searchA" placeholder="Tìm mã vận đơn / gian hàng..." aria-label="Tìm" oninput="SP.handleSearchA()">
           </div>
           <div class="btn-row" id="sp_actA" style="display:none">
-            <button class="btn-export" id="sp_btnDvvc" onclick="SP.exportDvvc()" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="sp_btnDvvc" onclick="SP.exportDvvc('kho')" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="sp_btnDvvc2" onclick="SP.exportDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet (trong sheet nhóm theo kho)"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
             <button class="btn-export" id="sp_btnCopyA" onclick="SP.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
             <button class="btn-export" id="sp_btnExportA" onclick="SP.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -471,7 +472,8 @@
             <input type="text" class="table-search" id="tt_searchA" placeholder="Tìm mã vận đơn..." aria-label="Tìm" oninput="TT.handleSearchA()">
           </div>
           <div class="btn-row" id="tt_actA" style="display:none">
-            <button class="btn-export" id="tt_btnDvvc" onclick="TT.exportDvvc()" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="tt_btnDvvc" onclick="TT.exportDvvc('kho')" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="tt_btnDvvc2" onclick="TT.exportDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet (trong sheet nhóm theo kho)"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
             <button class="btn-export" id="tt_btnCopyA" onclick="TT.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
             <button class="btn-export" id="tt_btnExportA" onclick="TT.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -617,7 +619,8 @@
         <button class="btn-export" id="bc_btnPng" onclick="BcTab.taiPng()"><span class="emo" aria-hidden="true">⬇</span> Tải PNG</button>
         <button class="btn-export" id="bc_btnCopyImg" onclick="BcTab.chepHinh()" title="Chép hình rồi dán thẳng vào Zalo"><span class="emo" aria-hidden="true">📋</span> Chép hình</button>
         <button class="btn-export" id="bc_btnCopyText" onclick="BcTab.chepChu()" title="Chép bản chữ để dán vào Zalo"><span class="emo" aria-hidden="true">💬</span> Chép bản chữ</button>
-        <button class="btn-export" id="bc_btnDvvc" onclick="BcTab.xuatDvvc()" title="File Excel đòi ĐVVC từ bảng đã dán"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+        <button class="btn-export" id="bc_btnDvvc" onclick="BcTab.xuatDvvc('kho')" title="File Excel đòi ĐVVC từ bảng đã dán"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+        <button class="btn-export" id="bc_btnDvvc2" onclick="BcTab.xuatDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
       </div>
     </div>
     <div id="bc_dvvcBox" hidden></div>

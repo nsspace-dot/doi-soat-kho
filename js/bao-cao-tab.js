@@ -30,61 +30,66 @@ var BcTab = (function () {
   function cat(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trim() + '…' : s; }
   function traGiao(b) { return b.tra + ' Trả hàng / ' + b.giao + ' Giao KTC'; }
 
-  /* ---------- vẽ thẻ ---------- */
+  /* ---------- vẽ thẻ ----------
+     Bố cục 2 cột: trái = báo cáo tuần này, phải = các tuần trước; dưới là tổng còn treo,
+     lý do + sản phẩm (2 cột), ghi chú.                                                   */
   function cardHtml(M) {
     var h = '';
     h += '<div class="bc-head"><div class="bc-title">📦 BÁO CÁO ĐỐI SOÁT ' + esc(M.sanLabel.toUpperCase()) + '</div>' +
-      '<div class="bc-sub">Tuần ' + esc(M.tuanNay) + ' · ' + M.soGian + ' gian hàng</div></div><div class="bc-body">';
+      '<div class="bc-sub">Tuần ' + esc(M.tuanNay) + ' · ' + M.soGian + ' gian hàng</div></div><div class="bc-body"><div class="bc-cols">';
 
-    h += '<div class="bc-nums">' +
-      numBox('Tuần này thiếu', M.so.nay, true) + numBox('Tồn các tuần trước', M.so.ton) + numBox('Tổng còn treo', M.so.tong) + '</div>';
-
-    // Gian × kho của tuần này
-    h += '<div class="bc-sec"><div class="bc-sec-h">Tuần ' + esc(M.tuanNay) + ' — đơn thiếu theo gian × kho</div>' +
+    // Cột trái: tuần này
+    h += '<div class="bc-col"><div class="bc-col-h">TUẦN NÀY · ' + esc(M.tuanNay) + '</div>' + numBox('Tuần này thiếu', M.so.nay, true) +
+      '<div class="bc-sec"><div class="bc-sec-h">Tuần ' + esc(M.tuanNay) + ' — đơn thiếu theo gian × kho</div>' +
       '<table class="bc-table"><thead><tr><th>Gian hàng</th>' + M.khoList.map(function (k) { return '<th>' + esc(k) + '</th>'; }).join('') + '<th>Tổng</th></tr></thead><tbody>';
     M.bang.gians.forEach(function (g) {
       h += '<tr><td>' + esc(g.ten) + '</td>' + M.khoList.map(function (k) { return heat(g.theoKho[k] || 0, M.bang.max); }).join('') +
         '<td class="sum">' + g.tong + '</td></tr>';
     });
     h += '<tr class="total"><td>Tổng theo kho</td>' + M.khoList.map(function (k) { return '<td>' + (M.bang.tongKho[k] || '–') + '</td>'; }).join('') +
-      '<td>' + M.bang.tong + '</td></tr></tbody></table></div>';
+      '<td>' + M.bang.tong + '</td></tr></tbody></table></div></div>';
 
-    // Tồn đọng các tuần trước
+    // Cột phải: các tuần trước
+    h += '<div class="bc-col"><div class="bc-col-h">CÁC TUẦN TRƯỚC · ' + M.ton.length + ' tuần</div>' + numBox('Tồn các tuần trước', M.so.ton) +
+      '<div class="bc-sec"><div class="bc-sec-h">Tồn đọng các tuần trước</div>';
     if (M.ton.length) {
-      h += '<div class="bc-sec"><div class="bc-sec-h">Tồn đọng các tuần trước</div><div class="bc-ton">' + M.ton.map(function (t) {
-        return '<div class="bc-ton-row"><span class="bc-ton-w">Tuần ' + esc(t.label) + '</span><span class="bc-ton-late">quá ' + t.quaNgay + ' ngày</span>' +
-          '<span class="bc-chips">' + t.kho.map(function (k) { return '<span class="bc-chip" style="' + khoVar(M, k.kho) + '">' + esc(k.kho) + ' ' + k.n + '</span>'; }).join('') +
-          '</span><span class="bc-ton-n">' + t.tong + '</span></div>';
-      }).join('') + '</div></div>';
-    }
+      h += '<div class="bc-ton">' + M.ton.map(function (t) {
+        return '<div class="bc-ton-row"><div class="bc-ton-top"><span class="bc-ton-w">Tuần ' + esc(t.label) + '</span><span class="bc-ton-late">quá ' + t.quaNgay +
+          ' ngày</span><span class="bc-ton-n">' + t.tong + '</span></div><span class="bc-chips">' +
+          t.kho.map(function (k) { return '<span class="bc-chip" style="' + khoVar(M, k.kho) + '">' + esc(k.kho) + ' ' + k.n + '</span>'; }).join('') + '</span></div>';
+      }).join('') + '</div>';
+    } else h += '<div class="bc-empty">Không có đơn tồn từ các tuần trước.</div>';
+    h += '</div></div></div>';
 
-    // Tổng còn treo theo kho
-    h += '<div class="bc-sec"><div class="bc-sec-h">Tổng còn treo theo kho (' + M.so.tong.tong + ' đơn)</div><div class="bc-stack">' +
+    // Tổng còn treo
+    h += '<div class="bc-sec bc-treo">' + numBox('Tổng còn treo', M.so.tong) + '<div class="bc-treo-bar"><div class="bc-sec-h">Tổng còn treo theo kho (' + M.so.tong.tong + ' đơn)</div><div class="bc-stack">' +
       M.tongKho.map(function (k) {
         return '<div class="bc-seg" style="' + khoVar(M, k.kho) + ';width:' + (k.n / M.so.tong.tong * 100).toFixed(2) + '%">' + (k.pct >= 9 ? esc(k.kho) + ' ' + k.n : '') + '</div>';
       }).join('') + '</div><div class="bc-legend">' + M.tongKho.map(function (k) {
         return '<span><span class="bc-dot" style="' + khoVar(M, k.kho) + '"></span>' + esc(k.kho) + ': ' + k.n + ' đơn (' + k.pct + '%)</span>';
-      }).join('') + '</div></div>';
+      }).join('') + '</div></div></div>';
 
+    // Lý do | Sản phẩm
+    var lyDoH = '', spH = '';
     if (M.lyDo && M.lyDo.length) {
       var maxL = M.lyDo[0].n;
-      h += '<div class="bc-sec"><div class="bc-sec-h">Lý do</div><div class="bc-bars">' + M.lyDo.map(function (l) {
+      lyDoH = '<div class="bc-col"><div class="bc-sec-h">Lý do</div><div class="bc-bars">' + M.lyDo.map(function (l) {
         return '<div class="bc-bar"><div class="bc-bar-l">' + esc(l.nhom) + '</div><div class="bc-bar-t"><div class="bc-bar-f" style="width:' +
           Math.max(2, Math.round(l.n / maxL * 100)) + '%"></div></div><div class="bc-bar-n">' + l.n + ' <span>(' + l.pct + '%)</span></div></div>';
       }).join('') + '</div></div>';
     }
-
     if (M.topSp) {
-      h += '<div class="bc-sec"><div class="bc-sec-h">Sản phẩm còn treo nhiều nhất</div><div class="bc-top">' + M.topSp.map(function (p, i) {
+      spH = '<div class="bc-col"><div class="bc-sec-h">Sản phẩm còn treo nhiều nhất</div><div class="bc-top">' + M.topSp.map(function (p, i) {
         var loai = [];
         if (p.tra) loai.push(p.tra + ' Trả hàng');
         if (p.giao) loai.push(p.giao + ' Giao KTC');
         if (p.khac) loai.push(p.khac + ' Khác');
-        return '<div class="bc-top-row"><span class="bc-top-i">' + (i + 1) + '.</span><span class="bc-top-name">' + esc(cat(p.ten, 110)) + '</span>' +
+        return '<div class="bc-top-row"><span class="bc-top-i">' + (i + 1) + '.</span><span class="bc-top-name">' + esc(cat(p.ten, 90)) + '</span>' +
           '<span class="bc-top-meta"><b>' + p.n + ' đơn</b> · ' + esc(loai.join(', ')) + ' · ' +
           esc(p.kho.map(function (k) { return k.kho + ' ' + k.n; }).join(', ')) + '</span></div>';
       }).join('') + '</div></div>';
     }
+    if (lyDoH || spH) h += '<div class="bc-cols bc-sec' + (lyDoH && spH ? '' : ' one') + '">' + lyDoH + spH + '</div>';
 
     var g = M.ghiChu;
     h += '<div class="bc-note"><div>👉 Ưu tiên kho <b>' + esc(g.kho) + '</b>: <b>' + g.a + '/' + g.b + '</b> đơn (' + g.pct + '%). Đơn cũ nhất từ tuần <b>' + esc(g.cuNhat) + '</b>.</div>' +
@@ -144,7 +149,7 @@ var BcTab = (function () {
         lyDo: x.lyDo, tuan: x.tuan.label, kho: x.kho, khoNguon: NhanDien.FILE };
     }) : [];
   }
-  function xuatDvvc() { if (model) XuatThieu.xuatDvvc(model.sanLabel, dvvcItems()); }
+  function xuatDvvc(theo) { if (model) XuatThieu.xuatDvvc(model.sanLabel, dvvcItems(), theo); }
   function save() {
     var text = $('bc_input').value;
     if (text.length > MAX_STORE) { UI.memSet(KEY, JSON.stringify({ san: san, text: '' })); return; }

@@ -353,7 +353,7 @@ function switchTab(paneId, btn) {
 // "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
 function exportExcelA() { return XuatThieu.xuat('shopee', resultMissA, allTimes); }
 function copyTableA() { return XuatThieu.chep('shopee', resultMissA, allTimes); }
-function exportDvvc() { return XuatThieu.doiDvvc('shopee', resultMissA, allTimes); }
+function exportDvvc(theo) { return XuatThieu.doiDvvc('shopee', resultMissA, allTimes, theo); }
 
 function exportExcelB() {
   if (!resultMissB.length) { alert('Không có mã nào để xuất!'); return; }

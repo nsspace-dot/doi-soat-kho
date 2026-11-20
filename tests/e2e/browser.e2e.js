@@ -441,7 +441,7 @@ async function main() {
       return { w: c.offsetWidth, radius: cs.borderTopLeftRadius, head: getComputedStyle(c.querySelector('.bc-head')).backgroundImage,
         nvs: chip('NVS'), tsn: chip('TSN'), vl: chip('VL'), body: getComputedStyle(c.querySelector('.bc-body')).backgroundColor };
     });
-    assert.equal(sizes.w, 820);
+    assert.equal(sizes.w, 1240);
     assert.equal(sizes.radius, '20px');
     assert.match(sizes.head, /rgb\(0, 0, 0\).*rgb\(255, 0, 80\)/, 'TikTok: đen -> hồng #ff0050');
     assert.deepEqual([sizes.nvs, sizes.tsn, sizes.vl], ['rgb(249, 115, 22)', 'rgb(37, 99, 235)', 'rgb(124, 58, 237)'], 'NVS cam, TSN xanh dương, VL tím');
@@ -468,9 +468,16 @@ async function main() {
     assert.equal(png.suggestedFilename(), 'Bao_cao_doi_soat_TikTok_02-11-08-11.png');
     const pngBuf = fs.readFileSync(await png.path());
     assert.equal(pngBuf.slice(1, 4).toString(), 'PNG');
-    assert.equal(pngBuf.readUInt32BE(16), 1640, 'PNG scale 2');
+    assert.equal(pngBuf.readUInt32BE(16), 2480, 'PNG scale 2');
     fs.writeFileSync(path.join(OUT, 'bc-tai-ve.png'), pngBuf);
     // Đòi ĐVVC từ bảng đã dán
+    // 2 cột: tuần này | các tuần trước
+    assert.deepEqual(await page.$$eval('#bc_card .bc-cols:first-child > .bc-col .bc-col-h', (e) => e.map((x) => x.textContent)), ['TUẦN NÀY · 02/11 - 08/11', 'CÁC TUẦN TRƯỚC · 2 tuần']);
+    const cols = await page.evaluate(() => [...document.querySelectorAll('#bc_card .bc-cols:first-child > .bc-col')].map((c) => { const r = c.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; }));
+    assert.ok(cols[1][0] > cols[0][0] + 400 && Math.abs(cols[1][1] - cols[0][1]) <= 1, 'hai cột nằm ngang hàng, không xếp dọc');
+    const dvB = await readDownload(page, () => page.click('#bc_btnDvvc2'));
+    assert.deepEqual(dvB.wb.SheetNames, ['Tổng hợp', 'J&T Express', 'J&T Cargo', 'SPX Express', 'Viettel Post', 'Tin nhắn']);
+    assert.equal(XLSX.utils.sheet_to_json(dvB.wb.Sheets['J&T Express'], { header: 1 }).length, 5, 'sheet ĐVVC: 4 kiện + tiêu đề');
     const bdv = await readDownload(page, () => page.click('#bc_btnDvvc'));
     assert.deepEqual(bdv.wb.SheetNames, ['Tổng hợp', 'Kho NVS', 'Kho TSN', 'Kho VL', 'Tin nhắn']);
     assert.equal(XLSX.utils.sheet_to_json(bdv.wb.Sheets['Tin nhắn'], { header: 1 }).length, 5, '4 nhóm kho × ĐVVC');

@@ -14,7 +14,7 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 | **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này không bị đổi trạng thái). |
 | **Đã đối soát** | Bảng mã Đã khớp (sàn, gian, loại file, ngày đối soát, ngày khớp), lọc sàn / gian / tuần khớp / tìm mã, xuất Excel theo bộ lọc. |
 
-| **🖼 Báo cáo hình** | Dán bảng theo dõi đơn thiếu (Ctrl+V từ Google Sheets / Excel) hoặc chọn file xlsx / csv → tự vẽ thẻ báo cáo 820px màu cố định (TikTok đen → hồng, Shopee cam → đỏ) → **Tải PNG**, **Chép hình** (dán thẳng Zalo), **Chép bản chữ**. Nhận cột theo tên tiêu đề; nhớ bảng dán gần nhất trên máy (localStorage `doiSoat_baoCao_v1`). |
+| **🖼 Báo cáo hình** | Dán bảng theo dõi đơn thiếu (Ctrl+V từ Google Sheets / Excel) hoặc chọn file xlsx / csv → tự vẽ thẻ báo cáo 1240px màu cố định, chia 2 cột (tuần này | các tuần trước) (TikTok đen → hồng, Shopee cam → đỏ) → **Tải PNG**, **Chép hình** (dán thẳng Zalo), **Chép bản chữ**. Nhận cột theo tên tiêu đề; nhớ bảng dán gần nhất trên máy (localStorage `doiSoat_baoCao_v1`). |
 
 Ô **Tìm một mã** ở đầu trang (mọi tab) cho biết mã đang Chờ đối soát / Đã khớp / Không có trong kho.
 Không đăng nhập, không ghi tên người: lịch sử chỉ có thời gian, hành động và số lượng.
@@ -57,7 +57,7 @@ Giá trị đoán có nhãn *đoán* bên cạnh.
 ## Nút "🚚 Xuất file đòi ĐVVC"
 
 Có ở danh sách "Sàn báo, kho chưa nhận" (Shopee, TikTok) và ở tab Báo cáo hình (từ bảng đã dán). File Excel gồm:
-**Tổng hợp** (bảng kho × ĐVVC theo số kiện + ghi chú số kiện có ĐVVC / kho là đoán), **mỗi kho 1 sheet** nhóm theo ĐVVC
+**Tổng hợp** (bảng kho × ĐVVC theo số kiện + ghi chú số kiện có ĐVVC / kho là đoán), **mỗi kho 1 sheet** nhóm theo ĐVVC (nút **Xuất theo ĐVVC** thì ngược lại: mỗi ĐVVC 1 sheet, trong sheet nhóm theo kho)
 (`STT | Mã vận đơn | ĐVVC | Gian | Loại | Mã đơn | Sản phẩm | Lý do | Tuần | Kho (thật/đoán)`, mã dạng chữ), và **Tin nhắn**
 (mỗi ô 1 tin soạn sẵn cho 1 kho × 1 ĐVVC). Trên trang, khối **Tin nhắn đòi ĐVVC** có nút **📋 Chép tin nhắn** cho từng kho × ĐVVC.
 
