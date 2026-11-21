@@ -48,7 +48,9 @@ async function newPage(browser, port, configured, viewport) {
   page.on('pageerror', (e) => { throw e; });
   await page.route('https://cdnjs.cloudflare.com/**', (route) => {
     const u = route.request().url();
-    const file = u.includes('xlsx') ? path.join(ROOT, 'node_modules/xlsx/dist/xlsx.full.min.js') : path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.js');
+    const file = u.includes('xlsx') ? path.join(ROOT, 'node_modules/xlsx/dist/xlsx.full.min.js')
+      : u.includes('html2canvas') ? path.join(ROOT, 'node_modules/html2canvas/dist/html2canvas.min.js')
+      : path.join(ROOT, 'node_modules/chart.js/dist/chart.umd.js');
     route.fulfill({ body: fs.readFileSync(file), contentType: 'text/javascript' });
   });
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
@@ -167,10 +169,10 @@ async function main() {
     step('Shopee: tải file mẫu đúng bộ cột');
 
     await page.setInputFiles('#sp_inp1', [xlsxFile('Shop_A.xlsx', [
-      ['Mã đơn hàng', 'Mã vận đơn', 'Đơn vị vận chuyển', 'Tên sản phẩm', 'Tên phân loại hàng', 'Tổng giá trị đơn hàng', 'Tỉnh/Thành phố'],
-      ['DH1', '862330000001', 'J&T', 'Lịch 2027', 'Đỏ', '135150.00', 'Hà Nội'],
-      ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM'],
-      ['DH3', 'SPXVN99999999', 'SPX', 'Quần', 'L', '70000.00', 'HCM']
+      ['Mã đơn hàng', 'Mã vận đơn', 'Đơn vị vận chuyển', 'Tên sản phẩm', 'Tên phân loại hàng', 'Tổng giá trị đơn hàng', 'Tỉnh/Thành phố', 'Ngày đặt hàng'],
+      ['DH1', '862330000001', 'J&T', 'Lịch 2027', 'Đỏ', '135150.00', 'Hà Nội', '2026-11-02 09:00'],
+      ['DH2', 'SPXVN00000004', 'SPX', 'Áo', 'M', '50000.00', 'HCM', '2026-11-05 09:00'],
+      ['DH3', 'SPXVN99999999', 'Nhanh-SPX Express', 'Quần', 'L', '70000.00', 'HCM', '2026-11-08 09:00']
     ])]);
     // Nhãn của file: gian đoán từ tên file, loại file đoán sẵn — sửa được
     assert.equal(await page.inputValue('#sp_list1 .file-gian'), 'Shop A');
@@ -219,14 +221,31 @@ async function main() {
     await page.click('#sp_btn-tabA');
     step('Shopee: xác nhận "Sẽ chuyển N mã sang Đã khớp", mã khớp chuyển trạng thái (không xoá), tab con "Đã khớp kho (2)" có tìm, phân trang, xuất Excel theo ô tìm, lịch sử không tên');
 
-    const exA = await readDownload(page, () => page.click('#sp_btnExportA'));
-    const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1 });
-    assert.equal(exRows[0][3], 'Gian hàng Shopee');
-    assert.match(exRows[1][0], /^Tuần \d+\/\d{4}$/);
-    assert.equal(exRows[1][1] || '', '');
-    assert.deepEqual(exRows[1].slice(2), ['SPXVN99999999', 'Shop A', 'Đơn hàng', 'Quần', 'L']);
+    // Bảng "Sàn báo, kho chưa nhận" có thêm cột ĐVVC + Lý do
+    assert.deepEqual(await page.$$eval('#sp_tabA thead th', (t) => t.map((x) => x.textContent)),
+      ['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn', 'Mã đơn hàng', 'Tên sản phẩm', 'Tỉnh/Thành', 'KHO', 'ĐVVC', 'Lý do']);
+    assert.match(await page.locator('#sp_tbodyA tr').first().innerText(), /SPXVN99999999.*Chưa rõ\s+SPX Express\s+Giao thất bại/s);
+    // Nút xuất hỏi "Tuần đối soát": điền sẵn theo ngày trong file, sửa được
+    await page.click('#sp_btnExportA');
+    await page.locator('.modal', { hasText: 'Tuần đối soát' }).waitFor();
+    assert.equal(await page.inputValue('.modal-input'), '02/11 - 08/11', 'điền sẵn theo khoảng ngày trong file');
+    await page.screenshot({ path: path.join(OUT, '4c-hoi-tuan-doi-soat.png') });
+    await page.fill('.modal-input', '03/11 - 09/11');
+    const exA = await readDownload(page, () => modalClick(page, 'Xuất Excel'));
+    const exRows = XLSX.utils.sheet_to_json(exA.wb.Sheets[exA.wb.SheetNames[0]], { header: 1, defval: '' });
+    assert.deepEqual(exRows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại',
+      'Thời gian trả trên hệ thống', 'ĐVVC', 'Lý do']);
+    assert.deepEqual(exRows[1], ['03/11 - 09/11', 'Chưa rõ', 'SPXVN99999999', 'Shop A', 'Đơn hàng', 'Quần', 'L', '2026-11-08 09:00', 'SPX Express', 'Giao thất bại']);
     assert.equal(exA.wb.Sheets[exA.wb.SheetNames[0]].C2.z, '@');
-    step('Shopee: xuất "Sàn báo, kho chưa nhận" đúng bộ cột, tuần ISO, KHO trống');
+    // Chép bảng: TSV có tiêu đề, nhớ tuần vừa nhập
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.click('#sp_btnCopyA');
+    assert.equal(await page.inputValue('.modal-input'), '03/11 - 09/11', 'nhớ tuần vừa nhập');
+    await modalClick(page, 'Chép bảng');
+    await page.locator('#toast.show', { hasText: 'Đã chép 1 dòng' }).waitFor();
+    const tsv = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((l) => l.split('\t'));
+    assert.deepEqual(tsv, exRows.slice(0, 2), 'TSV giống hệt file Excel');
+    step('Shopee: bảng có cột ĐVVC + Lý do; xuất hỏi "Tuần đối soát", file đúng 10 cột của bảng theo dõi; "Chép bảng" ra TSV có tiêu đề');
 
     // Đối soát lại cùng file: mã đã khớp vẫn tính là khớp, không hỏi, không đổi ngày khớp / nhãn cũ
     const before1 = row(ctl, '862330000001').join('|');
@@ -274,11 +293,32 @@ async function main() {
     await page.click('#tt_btn-tabA');
     step('TikTok: huỷ không đổi kho; ghi lại chỉ chuyển mã TikTok, GY bị lọc vẫn Chờ đối soát, gian sửa tay đi theo mã');
 
-    const ttA = await readDownload(page, () => page.click('#tt_btnExportA'));
-    const ttRows = XLSX.utils.sheet_to_json(ttA.wb.Sheets[ttA.wb.SheetNames[0]], { header: 1 });
-    assert.deepEqual(ttRows[0], ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng TikTok', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại']);
-    assert.equal(ttRows[1][2], '862330000077');
-    step('TikTok: xuất đúng bộ cột "Gian hàng TikTok"');
+    assert.deepEqual(await page.$$eval('#tt_tabA thead th', (t) => t.map((x) => x.textContent)),
+      ['STT', 'Gian hàng', 'Loại file', 'Mã vận đơn (Tracking ID)', 'KHO', 'ĐVVC', 'Lý do']);
+    assert.match(await page.locator('#tt_tbodyA tr').first().innerText(), /862330000077\s+VL\s*đoán\s+J&T Express/);
+    await page.click('#tt_btnExportA');
+    await page.locator('.modal', { hasText: 'Tuần đối soát' }).waitFor();
+    assert.match(await page.inputValue('.modal-input'), /^\d{2}\/\d{2} - \d{2}\/\d{2}$/, 'file không có ngày: lấy tuần T2-CN vừa qua');
+    const ttA = await readDownload(page, () => modalClick(page, 'Xuất Excel'));
+    const ttRows = XLSX.utils.sheet_to_json(ttA.wb.Sheets[ttA.wb.SheetNames[0]], { header: 1, defval: '' });
+    assert.equal(ttRows[0].length, 10);
+    assert.deepEqual(ttRows[1].slice(1), ['VL', '862330000077', 'Gian Một', 'Giao KTC', 'Lịch', 'Vàng', '', 'J&T Express', '']);
+    step('TikTok: bảng có cột ĐVVC + Lý do, xuất đúng 10 cột (kho đoán theo tên SP)');
+
+    // Đòi ĐVVC: file Excel + nút chép tin nhắn từng kho × ĐVVC
+    const dv = await readDownload(page, () => page.click('#tt_btnDvvc'));
+    assert.match(dv.name, /^Doi_DVVC_TikTok_\d{4}-\d{2}-\d{2}\.xlsx$/);
+    assert.deepEqual(dv.wb.SheetNames, ['Tổng hợp', 'Kho VL', 'Tin nhắn']);
+    assert.deepEqual(XLSX.utils.sheet_to_json(dv.wb.Sheets['Tổng hợp'], { header: 1 }).slice(0, 3), [['KHO \\ ĐVVC', 'J&T Express', 'Tổng'], ['VL', 1, 1], ['Tổng', 1, 1]]);
+    assert.deepEqual(XLSX.utils.sheet_to_json(dv.wb.Sheets['Kho VL'], { header: 1, defval: '' })[1].slice(0, 7), [1, '862330000077', 'J&T Express', 'Gian Một', 'Giao KTC', 'O3', 'Lịch']);
+    assert.equal(dv.wb.Sheets['Kho VL'].B2.z, '@');
+    await page.click('#tt_dvvcBox summary');
+    assert.match(await page.locator('#tt_dvvcBox .dvvc-row').innerText(), /KHO VL · J&T Express · 1 kiện \(1 giao KTC, 0 trả hàng\)/);
+    await page.click('#tt_dvvcBox .dvvc-copy');
+    await page.locator('#toast.show', { hasText: 'Đã chép tin nhắn [J&T Express] KHO VL' }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
+      '[J&T Express] KHO VL – nhờ kiểm tra & hoàn trả 1 kiện chưa về kho (1 giao không thành công, 0 trả hàng):\n862330000077');
+    step('Đòi ĐVVC (TikTok): file có Tổng hợp + sheet từng kho + Tin nhắn, nút "Chép tin nhắn" theo kho × ĐVVC');
 
     /* ---- Tab Đã đối soát ---- */
     await page.click('#platBtn_ds');
@@ -359,6 +399,118 @@ async function main() {
     assert.equal(await page.locator('#theme-toggle').count(), 0, 'đã bỏ nút sáng/tối cũ');
     assert.ok(await page.isVisible('#platBtn_kho .tab-ico'), 'Mèo con: tab có con vật');
     assert.match(await page.locator('#toast').innerText(), /^Xong rồi nè 🐻 /, 'Mèo con: thông báo thành công có con vật');
+
+    /* ---- Tab Báo cáo hình (dữ liệu giả) ---- */
+    await page.click('#platBtn_bc');
+    assert.ok(await page.isVisible('#bc_empty'));
+    const BC_H = ['Tuần đối soát', 'KHO', 'Mã vận đơn', 'Gian hàng', 'Loại tệp tin', 'Tên sản phẩm', 'Phân loại', 'Lý do'];
+    const BC_ROWS = [BC_H,
+      ['2/11 - 8/11', 'NVS', '860000000001', 'TikTok Tường Vip', 'Trả hàng hoàn tiền', 'Tranh treo tường A', 'Đỏ', 'Đổi ý'],
+      ['2/11 - 8/11', 'NVS', '860000000002', 'TƯỜNG VIP', 'Giao không thành công', 'Tranh treo tường A', '', 'Giao thất bại'],
+      ['2/11 - 8/11', 'NVS', '860000000007', 'TƯỜNG VIP', 'Trả hàng', 'Khung tranh C', '', 'Khác mô tả'],
+      ['2/11 - 8/11', 'VL', 'VTPVN00000003', 'NHÀ SÁCH', 'Trả hàng', 'Sách B\nbản đặc biệt', '', 'Lỗi/hỏng'],
+      ['2/11 - 8/11', 'VL', 'VTPVN00000003', 'TikTok Nhà Sách', 'Trả hàng', 'Sách B', '', 'Lỗi/hỏng'],
+      ['26/10 - 1/11', 'TSN', '530000000004', 'TikTok Nhà Sách', 'Giao KTC', 'Sách B', '', ''],
+      ['26/10 - 1/11', 'NVS', '860000000008', 'Tường Vip', 'Trả hàng', 'Tranh treo tường A', '', 'Hàng mẫu KOC'],
+      ['5/10 - 11/10', 'VL', 'SPXVN00000005', 'Tiktok Tranh Lịch', 'Trả hàng', 'Lịch D', '', 'Gửi sai hàng']];
+    const tsvOf = (rows) => rows.map((r) => r.map((v) => (/["\t\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v)).join('\t')).join('\n');
+    // Thiếu tiêu đề -> báo lỗi dễ hiểu
+    await page.fill('#bc_input', tsvOf(BC_ROWS.slice(1)));
+    await page.locator('#bc_err', { hasText: 'Không thấy dòng tiêu đề' }).waitFor();
+    assert.ok(!(await page.isVisible('#bc_out')));
+    await page.fill('#bc_input', tsvOf([BC_H, ['Tuần 44/2026', 'VL', '860000000001', 'G', 'Trả hàng', '', '', '']]));
+    await page.locator('#bc_err', { hasText: 'Không đọc được cột Tuần đối soát' }).waitFor();
+    // Dán bảng đúng -> tự vẽ
+    await page.fill('#bc_input', tsvOf(BC_ROWS));
+    await page.locator('#bc_card .bc-title').waitFor();
+    assert.ok(!(await page.isVisible('#bc_err')));
+    assert.equal(await page.textContent('#bc_info'), 'Đã đọc 8 dòng · 7 mã vận đơn · bỏ qua 1 mã trùng');
+    assert.equal(await page.textContent('#bc_card .bc-title'), '📦 BÁO CÁO ĐỐI SOÁT TIKTOK');
+    assert.equal(await page.textContent('#bc_card .bc-sub'), 'Tuần 02/11 - 08/11 · 2 gian hàng');
+    assert.deepEqual(await page.$$eval('#bc_card .bc-num', (e) => e.map((x) => x.innerText.replace(/\n+/g, '|'))),
+      ['Tuần này thiếu|4|3 Trả hàng / 1 Giao KTC', 'Tồn các tuần trước|3|2 Trả hàng / 1 Giao KTC', 'Tổng còn treo|7|5 Trả hàng / 2 Giao KTC']);
+    assert.deepEqual(await page.$$eval('#bc_card .bc-table tr', (trs) => trs.map((tr) => [...tr.children].map((c) => c.textContent))), [
+      ['Gian hàng', 'NVS', 'TSN', 'VL', 'Tổng'], ['TƯỜNG VIP', '3', '–', '–', '3'], ['NHÀ SÁCH', '–', '–', '1', '1'], ['Tổng theo kho', '3', '–', '1', '4']]);
+    assert.equal(await page.locator('#bc_card .bc-table td.heat').count(), 2);
+    assert.deepEqual(await page.$$eval('#bc_card .bc-ton-row', (e) => e.map((x) => x.querySelector('.bc-ton-w').textContent + '|' + x.querySelector('.bc-ton-n').textContent + '|' + [...x.querySelectorAll('.bc-chip')].map((c) => c.textContent).join(','))),
+      ['Tuần 26/10 - 01/11|2|NVS 1,TSN 1', 'Tuần 05/10 - 11/10|1|VL 1']);
+    assert.match(await page.locator('#bc_card .bc-ton-late').first().textContent(), /^quá \d+ ngày$/);
+    const sizes = await page.evaluate(() => {
+      const c = document.getElementById('bc_card'), cs = getComputedStyle(c);
+      const chip = (t) => getComputedStyle([...c.querySelectorAll('.bc-chip')].find((x) => x.textContent.startsWith(t))).borderTopColor;
+      return { w: c.offsetWidth, radius: cs.borderTopLeftRadius, head: getComputedStyle(c.querySelector('.bc-head')).backgroundImage,
+        nvs: chip('NVS'), tsn: chip('TSN'), vl: chip('VL'), body: getComputedStyle(c.querySelector('.bc-body')).backgroundColor };
+    });
+    assert.equal(sizes.w, 1240);
+    assert.equal(sizes.radius, '20px');
+    assert.match(sizes.head, /rgb\(0, 0, 0\).*rgb\(255, 0, 80\)/, 'TikTok: đen -> hồng #ff0050');
+    assert.deepEqual([sizes.nvs, sizes.tsn, sizes.vl], ['rgb(249, 115, 22)', 'rgb(37, 99, 235)', 'rgb(124, 58, 237)'], 'NVS cam, TSN xanh dương, VL tím');
+    const cardText = await page.locator('#bc_card').innerText();
+    assert.match(cardText, /Tổng còn treo theo kho \(7 đơn\)/);
+    assert.match(cardText, /Lý do[\s\S]*Giao thất bại\s+2 \(29%\)/);
+    assert.match(cardText, /Sản phẩm còn treo nhiều nhất[\s\S]*1\.\s*Tranh treo tường A\s*3 đơn · 2 Trả hàng, 1 Giao KTC · NVS 3/);
+    assert.match(cardText, /👉 Ưu tiên kho NVS: 4\/7 đơn \(57%\)\. Đơn cũ nhất từ tuần 05\/10 - 11\/10\./);
+    assert.match(cardText, /🚚 Theo ĐVVC: J&T Express 4 · /);
+    await page.locator('#bc_card').screenshot({ path: path.join(OUT, 'bc-the-tiktok.png') });
+    // Bản chữ
+    await page.click('#bc_btnCopyText');
+    await page.locator('#toast.show', { hasText: 'Đã chép bản chữ' }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), [
+      'Báo cáo kết quả đối soát 02/11 - 08/11 tiktok',
+      'TIKTOK TƯỜNG VIP THIẾU 3 ĐƠN: 3 đơn kho NVS',
+      'TIKTOK NHÀ SÁCH THIẾU 1 ĐƠN: 1 đơn kho VL',
+      'Tồn các tuần trước: 3 đơn',
+      '- Tuần 26/10 - 01/11: 2 đơn (1 đơn kho NVS; 1 đơn kho TSN)',
+      '- Tuần 05/10 - 11/10: 1 đơn (1 đơn kho VL)',
+      'Tổng còn treo: 7 đơn (4 đơn kho NVS; 1 đơn kho TSN; 2 đơn kho VL)'].join('\n'));
+    // Tải PNG: scale 2 -> rộng 1640px
+    const [png] = await Promise.all([page.waitForEvent('download'), page.click('#bc_btnPng')]);
+    assert.equal(png.suggestedFilename(), 'Bao_cao_doi_soat_TikTok_02-11-08-11.png');
+    const pngBuf = fs.readFileSync(await png.path());
+    assert.equal(pngBuf.slice(1, 4).toString(), 'PNG');
+    assert.equal(pngBuf.readUInt32BE(16), 2480, 'PNG scale 2');
+    fs.writeFileSync(path.join(OUT, 'bc-tai-ve.png'), pngBuf);
+    // Đòi ĐVVC từ bảng đã dán
+    // 2 cột: tuần này | các tuần trước
+    assert.deepEqual(await page.$$eval('#bc_card .bc-cols:first-child > .bc-col .bc-col-h', (e) => e.map((x) => x.textContent)), ['TUẦN NÀY · 02/11 - 08/11', 'CÁC TUẦN TRƯỚC · 2 tuần']);
+    const cols = await page.evaluate(() => [...document.querySelectorAll('#bc_card .bc-cols:first-child > .bc-col')].map((c) => { const r = c.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; }));
+    assert.ok(cols[1][0] > cols[0][0] + 400 && Math.abs(cols[1][1] - cols[0][1]) <= 1, 'hai cột nằm ngang hàng, không xếp dọc');
+    const dvB = await readDownload(page, () => page.click('#bc_btnDvvc2'));
+    assert.deepEqual(dvB.wb.SheetNames, ['Tổng hợp', 'J&T Express', 'J&T Cargo', 'SPX Express', 'Viettel Post', 'Tin nhắn']);
+    assert.equal(XLSX.utils.sheet_to_json(dvB.wb.Sheets['J&T Express'], { header: 1 }).length, 5, 'sheet ĐVVC: 4 kiện + tiêu đề');
+    const bdv = await readDownload(page, () => page.click('#bc_btnDvvc'));
+    assert.deepEqual(bdv.wb.SheetNames, ['Tổng hợp', 'Kho NVS', 'Kho TSN', 'Kho VL', 'Tin nhắn']);
+    assert.equal(XLSX.utils.sheet_to_json(bdv.wb.Sheets['Tin nhắn'], { header: 1 }).length, 5, '4 nhóm kho × ĐVVC');
+    assert.equal(await page.locator('#bc_dvvcBox .dvvc-copy').count(), 4);
+    await page.click('#bc_dvvcBox summary');
+    await page.locator('#bc_dvvcBox .dvvc-copy').first().click();
+    await page.locator('#toast.show', { hasText: 'Đã chép tin nhắn [J&T Express] KHO NVS (4 kiện)' }).waitFor();
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()),
+      /^\[J&T Express\] KHO NVS – nhờ kiểm tra & hoàn trả 4 kiện chưa về kho \(1 giao không thành công, 3 trả hàng\):\n860000000001\n860000000002\n860000000007\n860000000008$/);
+    await page.screenshot({ path: path.join(OUT, 'bc-toan-tab.png'), fullPage: true });
+    // Chép hình vào bộ nhớ tạm
+    await page.click('#bc_btnCopyImg');
+    await page.locator('#toast.show', { hasText: /Đã chép hình|đã tải file PNG/ }).waitFor();
+    // Đổi sàn -> đổi màu đầu thẻ; nhớ dữ liệu + sàn sau khi tải lại trang
+    await page.click('.bc-san-btn[data-san="shopee"]');
+    assert.equal(await page.textContent('#bc_card .bc-title'), '📦 BÁO CÁO ĐỐI SOÁT SHOPEE');
+    assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('#bc_card .bc-head')).backgroundImage), /rgb\(242, 112, 29\).*rgb\(196, 0, 26\)/, 'Shopee: cam -> đỏ');
+    await page.locator('#bc_card').screenshot({ path: path.join(OUT, 'bc-the-shopee.png') });
+    const nho = JSON.parse(await page.evaluate(() => localStorage.getItem('doiSoat_baoCao_v1')));
+    assert.equal(nho.san, 'shopee');
+    assert.equal(nho.text, tsvOf(BC_ROWS), 'nhớ bảng dán gần nhất trên máy');
+    // Chọn file xlsx (cột đảo thứ tự, không có Lý do / Tên sản phẩm)
+    await page.setInputFiles('#bc_file', [xlsxFile('theo_doi.xlsx', BC_ROWS.map((r) => [r[2], r[0], r[4], r[3], r[1]]))]);
+    await page.locator('#bc_info', { hasText: 'Đã đọc 8 dòng · 7 mã vận đơn' }).waitFor();
+    const noOpt = await page.locator('#bc_card').innerText();
+    assert.ok(!/Lý do|Sản phẩm còn treo/.test(noOpt), 'không có cột thì không vẽ khối đó');
+    await page.click('.bc-san-btn[data-san="tiktok"]');
+    await page.fill('#bc_input', tsvOf(BC_ROWS));
+    await page.locator('#bc_card .bc-top').waitFor();
+    step('Báo cáo hình: báo lỗi thiếu tiêu đề / tuần, dán bảng tự vẽ thẻ 820px (gian × kho, tồn, lý do, top SP, ghi chú), bản chữ đúng mẫu, tải PNG scale 2, đổi sàn đổi màu, nhớ dữ liệu, đọc file xlsx');
+
+    await page.click('#platBtn_kho');
+
     // Thẻ "Tồn từ 7 ngày" tô cảnh báo khi có mã cũ
     ctl.gas.post({ action: 'upload', cheDo: 'gop', items: [{ ma: 'CU0000000001', ngay: '01/10/2026' }] });
     await page.click('#st_refresh');
@@ -447,14 +599,15 @@ async function main() {
       await page.keyboard.press('Escape');
       await page.locator('#themePanel').waitFor({ state: 'hidden' });
 
-      for (const t of ['kho', 'sp', 'tt', 'ds']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds', 'bc']) {
         await page.click('#platBtn_' + t);
         const r = await scanContrast(page);
         assert.ok(r.checked > 40, name + ' ' + t + ' quét ' + r.checked + ' phần tử');
         assert.deepEqual(r.fails, [], name + ' tab ' + t);
         const text = await visibleText(page);
         if (chuDe !== 'meo') assert.ok(!ANIMALS.test(text), name + ' ' + t + ': không được có con vật');
-        if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(text), name + ' ' + t + ': không emoji');
+        // Thẻ báo cáo hình (màu + biểu tượng cố định để gửi Zalo) được miễn quy định không emoji.
+        if (chuDe === 'toigian') assert.ok(!/\p{Extended_Pictographic}/u.test(t === 'bc' ? text.replace(/[📦👉🚚]/gu, '') : text), name + ' ' + t + ': không emoji');
         if (chuDe === 'meo') {
           const tables = await page.evaluate((t) => [...document.querySelectorAll('#pane_' + t + ' table, #pane_' + t + ' .chart-card')].map((e) => e.innerText).join(' '), t);
           assert.ok(!ANIMALS.test(tables), name + ': không con vật trong bảng/biểu đồ');
@@ -489,6 +642,10 @@ async function main() {
     // Lưu và khôi phục sau khi tải lại trang
     await page.reload();
     assert.equal(await page.getAttribute('html', 'data-theme'), 'toigian-dark');
+    await page.click('#platBtn_bc');
+    await page.locator('#bc_card .bc-title', { hasText: 'TIKTOK' }).waitFor();
+    assert.match(await page.inputValue('#bc_input'), /^Tuần đối soát\tKHO\tMã vận đơn/, 'Báo cáo hình: nhớ bảng dán gần nhất sau khi tải lại trang');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#bc_card .bc-body')).backgroundColor), 'rgb(255, 255, 255)', 'thẻ báo cáo màu cố định, không theo chủ đề tối');
     step('Tải lại trang: giữ chủ đề đã chọn');
 
     // Áp theme trước khi vẽ: data-theme đã có ngay khi DOM bắt đầu dựng
@@ -528,7 +685,7 @@ async function main() {
     await mobile.locator('#st_count', { hasText: /^\d+$/ }).waitFor();
     for (const [chuDe, cheDo] of VARIANTS) {
       await mobile.evaluate((t) => Theme.set(t), { chuDe, cheDo });
-      for (const t of ['kho', 'sp', 'tt', 'ds']) {
+      for (const t of ['kho', 'sp', 'tt', 'ds', 'bc']) {
         await mobile.click('#platBtn_' + t);
         const over = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         assert.ok(over <= 0, chuDe + '-' + cheDo + ' tab ' + t + ' tràn ngang ' + over + 'px');

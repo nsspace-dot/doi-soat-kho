@@ -6,10 +6,10 @@
    ===================================================================== */
 (function (root, factory) {
   var req = typeof require === 'function' ? require : null;
-  var api = factory(root.Common || req('./common.js'), root.Template || req('./template.js'));
+  var api = factory(root.Common || req('./common.js'), root.Template || req('./template.js'), root.NhanDien || req('./nhan-dien.js'));
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.ShopeeCore = api;
-})(typeof self !== 'undefined' ? self : this, function (Common, Template) {
+})(typeof self !== 'undefined' ? self : this, function (Common, Template, NhanDien) {
   'use strict';
   var findCol = Common.findCol, getCellStr = Common.getCellStr,
       sanitizeTrackingId = Common.sanitizeTrackingId, isLikelyRealTrackingId = Common.isLikelyRealTrackingId;
@@ -95,18 +95,25 @@
       // File mẫu đơn thiếu / file xuất "chưa về kho" nạp lại.
       if (Template.isListHeader(hMap)) {
         Template.readListRows(ws, h.headerRow, hMap, shop).forEach(function (x) {
+          var dvX = NhanDien.dvvc(x.dvvc, x.cleanTid), khoX = NhanDien.kho('shopee', x.kho, x.prod);
           records.push({ shop: x.shop, kind: 'exported', loai: item.loai, typeLabel: x.typeLabel, tid: x.tid, cleanTid: x.cleanTid,
-            oid: '', prod: x.prod, variant: x.variant, prov: '', pay: '', dvvc: '', amt: 0, kho: x.kho, week: x.week });
+            oid: '', prod: x.prod, variant: x.variant, prov: '', pay: '', dvvc: '', amt: 0, kho: x.kho, week: x.week,
+            dvvcTen: dvX.ten, dvvcNguon: dvX.nguon, lyDo: x.lyDo, khoNguon: khoX.nguon, time: x.time });
         });
         return;
       }
 
       var tidIdx, dvvcIdx, amtIdx, amtAltIdx, phuongAnIdx, retStatusIdx;
+      // Nhận diện ĐVVC / Lý do / Kho / thời gian (cột ĐVVC của biểu đồ giữ cách đọc cũ ở trên).
+      var ndDvvcIdx, ndLyDoIdx, ndKhoIdx, ndTimeIdx;
       if (kind === 'don') {
         // S1: file đơn hàng -> hàng quay đầu giữ nguyên mã giao
         tidIdx  = findCol(hMap, ['mã vận đơn', 'tracking'], ['kiện']);
         dvvcIdx = findCol(hMap, ['đơn vị vận chuyển']);
         amtIdx  = findCol(hMap, ['tổng giá trị đơn hàng', 'tổng giá trị']);
+        ndDvvcIdx = dvvcIdx;                                   // "Đơn Vị Vận Chuyển"
+        ndKhoIdx  = findCol(hMap, ['tên kho hàng', 'tên kho']);
+        ndTimeIdx = findCol(hMap, ['thời gian hủy', 'ngày hủy', 'thời gian hoàn thành', 'thời gian giao hàng', 'ngày gửi hàng', 'ngày đặt hàng']);
       } else {
         // S1: file khiếu nại -> BẮT BUỘC dùng cột mã vận đơn TRẢ HÀNG.
         tidIdx = findCol(hMap, ['mã vận đơn trả hàng', 'mã vận đơn trả', 'return tracking'], ['giao']);
@@ -118,6 +125,10 @@
         amtAltIdx = findCol(hMap, ['tổng giá trị']);   // Shopee thường để 0 ở cột hoàn trả
         phuongAnIdx  = findCol(hMap, ['phương án']);
         retStatusIdx = findCol(hMap, ['trạng thái trả hàng']);
+        // CHIỀU VỀ: chỉ cột "Đơn vị vận chuyển trả hàng". Cột "…giao hàng" chỉ ghi loại dịch vụ -> không dùng.
+        ndDvvcIdx = findCol(hMap, ['đơn vị vận chuyển trả hàng'], []);
+        ndLyDoIdx = findCol(hMap, ['lí do trả hàng', 'lý do trả hàng', 'lí do', 'lý do']);
+        ndTimeIdx = findCol(hMap, ['thời gian yêu cầu', 'ngày yêu cầu', 'thời gian tạo', 'ngày tạo', 'thời gian trả', 'ngày trả', 'ngày đặt hàng']);
       }
       var dvvcGiaoIdx = findCol(hMap, ['đơn vị vận chuyển giao hàng', 'đơn vị vận chuyển'], ['trả']);
       var oidIdx  = findCol(hMap, ['mã đơn hàng']);
@@ -148,15 +159,22 @@
         if (!dv && dvvcGiaoIdx !== undefined) dv = getCellStr(ws, r, dvvcGiaoIdx);
         var amt = amtIdx !== undefined ? parseMoneyShopee(getCellStr(ws, r, amtIdx)) : 0;   // S9
         if (!amt && amtAltIdx !== undefined) amt = parseMoneyShopee(getCellStr(ws, r, amtAltIdx));
+        var prodName = prodIdx !== undefined ? getCellStr(ws, r, prodIdx) : '';
+        var nd = NhanDien.dvvc(ndDvvcIdx !== undefined ? getCellStr(ws, r, ndDvvcIdx) : '', cleanTid);
+        var ndKho = NhanDien.kho('shopee', ndKhoIdx !== undefined ? NhanDien.khoTuTen(getCellStr(ws, r, ndKhoIdx)) : '', prodName);
         records.push({
           shop: shop, kind: kind, loai: item.loai, tid: rawTid, cleanTid: cleanTid,
           oid:  oidIdx  !== undefined ? getCellStr(ws, r, oidIdx)  : '',
-          prod: prodIdx !== undefined ? getCellStr(ws, r, prodIdx) : '',
+          prod: prodName,
           variant: variantIdx !== undefined ? getCellStr(ws, r, variantIdx) : '',
           prov: provIdx !== undefined ? getCellStr(ws, r, provIdx) : '',
           pay:  payIdx  !== undefined ? getCellStr(ws, r, payIdx)  : '',
           dvvc: dv,
-          amt:  amt
+          amt:  amt,
+          dvvcTen: nd.ten, dvvcNguon: nd.nguon,
+          lyDo: kind === 'don' ? 'Giao thất bại' : (ndLyDoIdx !== undefined ? getCellStr(ws, r, ndLyDoIdx) : ''),
+          kho: ndKho.nguon ? ndKho.ten : '', khoNguon: ndKho.nguon,
+          time: NhanDien.cellTime(ws, r, ndTimeIdx)
         });
       }
     });
@@ -166,10 +184,8 @@
     /* ---- S6: gom mã DUY NHẤT để đối soát, nhưng giữ mọi dòng cho biểu đồ ---- */
     var shopeeIds = new Set(records.map(function (x) { return x.cleanTid; }));
 
-    var seen = new Set(), missA = [];
-    records.forEach(function (rec) {
-      if (!khoIds.has(rec.cleanTid) && !seen.has(rec.cleanTid)) { missA.push(rec); seen.add(rec.cleanTid); }
-    });
+    // Mỗi mã vận đơn 1 dòng; kiện nhiều SKU gộp tên sản phẩm bằng " | ".
+    var missA = NhanDien.gopTheoMa(records.filter(function (rec) { return !khoIds.has(rec.cleanTid); }));
 
     /* ---- S4: chiều ngược — mã đã về kho nhưng Shopee chưa ghi nhận ---- */
     var missB = [];

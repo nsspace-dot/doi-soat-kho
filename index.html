@@ -8,11 +8,13 @@
 <script src="js/theme.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/themes.css">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/bao-cao.css">
 </head>
 <body>
 
@@ -37,6 +39,7 @@
     <button class="tab" data-tab="sp" id="platBtn_sp" role="tab" onclick="App.switchTab('sp')"><span class="tab-ico animal" aria-hidden="true">🐱</span><span class="dot" aria-hidden="true"></span><span>Shopee</span></button>
     <button class="tab" data-tab="tt" id="platBtn_tt" role="tab" onclick="App.switchTab('tt')"><span class="tab-ico animal" aria-hidden="true">🐰</span><span class="dot" aria-hidden="true"></span><span>TikTok</span></button>
     <button class="tab" data-tab="ds" id="platBtn_ds" role="tab" onclick="App.switchTab('ds')"><span class="tab-ico animal" aria-hidden="true">🐼</span><span class="dot" aria-hidden="true"></span><span>Đã đối soát</span></button>
+    <button class="tab" data-tab="bc" id="platBtn_bc" role="tab" onclick="App.switchTab('bc')"><span class="tab-ico emo" aria-hidden="true">🖼</span><span class="dot" aria-hidden="true"></span><span>Báo cáo hình</span></button>
   </nav>
 
   <!-- Thẻ số liệu kho chung: luôn hiện ở cả 3 tab -->
@@ -294,14 +297,20 @@
             <h3 class="section-label" style="margin:0">Sàn báo, kho chưa nhận</h3>
             <input type="text" class="table-search" id="sp_searchA" placeholder="Tìm mã vận đơn / gian hàng..." aria-label="Tìm" oninput="SP.handleSearchA()">
           </div>
-          <button class="btn-export" id="sp_btnExportA" onclick="SP.exportExcelA()" style="display:none">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Xuất "Sàn báo, kho chưa nhận"
-          </button>
+          <div class="btn-row" id="sp_actA" style="display:none">
+            <button class="btn-export" id="sp_btnDvvc" onclick="SP.exportDvvc('kho')" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="sp_btnDvvc2" onclick="SP.exportDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet (trong sheet nhóm theo kho)"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
+            <button class="btn-export" id="sp_btnCopyA" onclick="SP.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
+            <button class="btn-export" id="sp_btnExportA" onclick="SP.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất "Sàn báo, kho chưa nhận"
+            </button>
+          </div>
         </div>
+        <div id="sp_dvvcBox" hidden></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn</th><th>Mã đơn hàng</th><th>Tên sản phẩm</th><th>Tỉnh/Thành</th><th>KHO</th></tr></thead>
+            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn</th><th>Mã đơn hàng</th><th>Tên sản phẩm</th><th>Tỉnh/Thành</th><th>KHO</th><th>ĐVVC</th><th>Lý do</th></tr></thead>
             <tbody id="sp_tbodyA"></tbody>
           </table>
         </div>
@@ -462,14 +471,20 @@
             <h3 class="section-label" style="margin:0">Sàn báo, kho chưa nhận</h3>
             <input type="text" class="table-search" id="tt_searchA" placeholder="Tìm mã vận đơn..." aria-label="Tìm" oninput="TT.handleSearchA()">
           </div>
-          <button class="btn-export" id="tt_btnExportA" onclick="TT.exportExcelA()" style="display:none">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Xuất "Sàn báo, kho chưa nhận"
-          </button>
+          <div class="btn-row" id="tt_actA" style="display:none">
+            <button class="btn-export" id="tt_btnDvvc" onclick="TT.exportDvvc('kho')" title="File Excel đòi ĐVVC: tổng hợp kho × ĐVVC, mỗi kho 1 sheet, tin nhắn soạn sẵn"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+            <button class="btn-export" id="tt_btnDvvc2" onclick="TT.exportDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet (trong sheet nhóm theo kho)"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
+            <button class="btn-export" id="tt_btnCopyA" onclick="TT.copyTableA()" title="Chép bảng (có dòng tiêu đề) để dán thẳng vào Google Sheets"><span class="emo" aria-hidden="true">📋</span> Chép bảng</button>
+            <button class="btn-export" id="tt_btnExportA" onclick="TT.exportExcelA()" title="File Excel đúng thứ tự cột của bảng theo dõi">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất "Sàn báo, kho chưa nhận"
+            </button>
+          </div>
         </div>
+        <div id="tt_dvvcBox" hidden></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn (Tracking ID)</th><th>KHO</th></tr></thead>
+            <thead><tr><th style="width:50px">STT</th><th>Gian hàng</th><th>Loại file</th><th>Mã vận đơn (Tracking ID)</th><th>KHO</th><th>ĐVVC</th><th>Lý do</th></tr></thead>
             <tbody id="tt_tbodyA"></tbody>
           </table>
         </div>
@@ -560,24 +575,82 @@
   </section>
 </div>
 </div>
+<!-- =========================== TAB BÁO CÁO HÌNH =========================== -->
+<div class="plat-pane" id="pane_bc">
+<div class="container">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-h">Dán bảng theo dõi đơn thiếu</h2>
+      <div class="bc-san" role="group" aria-label="Chọn sàn">
+        <button class="bc-san-btn" data-san="tiktok" onclick="BcTab.setSan('tiktok')">TikTok</button>
+        <button class="bc-san-btn" data-san="shopee" onclick="BcTab.setSan('shopee')">Shopee</button>
+      </div>
+    </div>
+    <label class="sr-only" for="bc_input">Dán bảng</label>
+    <textarea class="zalo-input bc-input" id="bc_input" spellcheck="false" placeholder="Chép vùng bảng trong Google Sheets / Excel (kèm dòng tiêu đề) rồi dán vào đây (Ctrl+V). Dán xong tự vẽ hình."></textarea>
+    <div class="action-row bc-actions">
+      <button class="btn-export" id="bc_btnFile" onclick="document.getElementById('bc_file').click()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Chọn file xlsx / csv
+      </button>
+      <input type="file" id="bc_file" accept=".xlsx,.xls,.csv">
+      <button class="btn-export" onclick="BcTab.clear()">Xoá</button>
+      <span class="file-summary" id="bc_info" aria-live="polite"></span>
+    </div>
+    <div class="err-box" id="bc_err" role="alert" hidden><span></span></div>
+    <details class="help">
+      <summary><span aria-hidden="true">ⓘ</span> Bảng cần có cột nào</summary>
+      <div class="help-body">
+        <p>Nhận cột theo <b>tên tiêu đề</b>, thứ tự cột tuỳ ý. Bắt buộc: <b>Tuần đối soát</b>, <b>KHO</b>, <b>Mã vận đơn</b>, <b>Gian hàng</b>, <b>Loại tệp tin</b>. Không bắt buộc: <b>Tên sản phẩm</b>, <b>Phân loại</b>, <b>Lý do</b>, <b>ĐVVC</b> (không có cột ĐVVC thì đoán theo mã vận đơn).</p>
+        <p>Tuần ghi dạng <code>02/11 - 08/11</code> hoặc <code>2/11 - 9/11</code>; tuần mới nhất trong bảng là “tuần này”. Mã vận đơn trùng chỉ tính 1 lần. Bảng dán gần nhất được nhớ trên máy này.</p>
+      </div>
+    </details>
+  </section>
+
+  <div class="empty-state" id="bc_empty">
+    <div class="empty-ico animal" aria-hidden="true">🐨</div>
+    <p>Chưa có báo cáo. Dán bảng vào ô phía trên hoặc chọn file.</p>
+  </div>
+
+  <section class="card" id="bc_out" hidden>
+    <div class="card-head">
+      <h2 class="card-h">Thẻ báo cáo</h2>
+      <div class="btn-row">
+        <button class="btn-export" id="bc_btnPng" onclick="BcTab.taiPng()"><span class="emo" aria-hidden="true">⬇</span> Tải PNG</button>
+        <button class="btn-export" id="bc_btnCopyImg" onclick="BcTab.chepHinh()" title="Chép hình rồi dán thẳng vào Zalo"><span class="emo" aria-hidden="true">📋</span> Chép hình</button>
+        <button class="btn-export" id="bc_btnCopyText" onclick="BcTab.chepChu()" title="Chép bản chữ để dán vào Zalo"><span class="emo" aria-hidden="true">💬</span> Chép bản chữ</button>
+        <button class="btn-export" id="bc_btnDvvc" onclick="BcTab.xuatDvvc('kho')" title="File Excel đòi ĐVVC từ bảng đã dán"><span class="emo" aria-hidden="true">🚚</span> Xuất file đòi ĐVVC</button>
+        <button class="btn-export" id="bc_btnDvvc2" onclick="BcTab.xuatDvvc('dvvc')" title="File Excel đòi ĐVVC, mỗi ĐVVC 1 sheet"><span class="emo" aria-hidden="true">🚚</span> Xuất theo ĐVVC</button>
+      </div>
+    </div>
+    <div id="bc_dvvcBox" hidden></div>
+    <div class="bc-scroll"><div class="bc-card" id="bc_card"></div></div>
+  </section>
+</div>
+</div>
 </main>
 
 <script src="js/config.js"></script>
 <script src="js/core/common.js"></script>
 <script src="js/core/template.js"></script>
+<script src="js/core/nhan-dien.js"></script>
 <script src="js/core/kho-input.js"></script>
 <script src="js/core/shopee-core.js"></script>
 <script src="js/core/tiktok-core.js"></script>
 <script src="js/core/trang-thai.js"></script>
 <script src="js/core/da-doi-soat.js"></script>
 <script src="js/core/khop-kho.js"></script>
+<script src="js/core/bao-cao.js"></script>
+<script src="js/core/doi-dvvc.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/kho-sync.js"></script>
+<script src="js/xuat-thieu.js"></script>
 <script src="js/kho-tab.js"></script>
 <script src="js/shopee.js"></script>
 <script src="js/tiktok.js"></script>
 <script src="js/da-doi-soat-tab.js"></script>
+<script src="js/bao-cao-tab.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

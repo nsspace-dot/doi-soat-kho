@@ -5,7 +5,7 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 
 > Hướng dẫn cài đặt và cách dùng hằng tuần: **[HUONG-DAN.md](HUONG-DAN.md)**.
 
-## Bốn tab
+## Năm tab
 
 | Tab | Việc làm |
 | --- | --- |
@@ -13,6 +13,8 @@ Kho mã nằm trên một Google Sheet riêng, đọc/ghi qua một Google Apps 
 | **Shopee** | Nạp file đơn hàng + khiếu nại Shopee (mỗi file có ô **Gian hàng** và **Loại file**) → đối soát với kho chung → chuyển mã Shopee đã khớp sang **Đã khớp** (sau khi xác nhận) → tab con **"Đã khớp kho (N)"** liệt kê mọi mã trong chứng từ có trong kho (đánh dấu mã vừa khớp / đã khớp từ trước), có tìm mã và xuất Excel. |
 | **TikTok** | Như Shopee, cho file Giao không thành công / Trả hàng của TikTok. Giữ tuỳ chọn loại mã SPXVN / GY… khỏi đối soát (các mã này không bị đổi trạng thái). |
 | **Đã đối soát** | Bảng mã Đã khớp (sàn, gian, loại file, ngày đối soát, ngày khớp), lọc sàn / gian / tuần khớp / tìm mã, xuất Excel theo bộ lọc. |
+
+| **🖼 Báo cáo hình** | Dán bảng theo dõi đơn thiếu (Ctrl+V từ Google Sheets / Excel) hoặc chọn file xlsx / csv → tự vẽ thẻ báo cáo 1240px màu cố định, chia 2 cột (tuần này | các tuần trước) (TikTok đen → hồng, Shopee cam → đỏ) → **Tải PNG**, **Chép hình** (dán thẳng Zalo), **Chép bản chữ**. Nhận cột theo tên tiêu đề; nhớ bảng dán gần nhất trên máy (localStorage `doiSoat_baoCao_v1`). |
 
 Ô **Tìm một mã** ở đầu trang (mọi tab) cho biết mã đang Chờ đối soát / Đã khớp / Không có trong kho.
 Không đăng nhập, không ghi tên người: lịch sử chỉ có thời gian, hành động và số lượng.
@@ -37,18 +39,46 @@ công tắc Sáng/Tối (6 biến thể). Lựa chọn lưu trong trình duyệt
 Màu của từng biến thể nằm trong `css/themes.css`; `css/app.css` chỉ dùng biến. Mọi cặp chữ/nền đạt tương phản ≥ 4.5:1
 (`tests/theme.test.js` kiểm tra).
 
+## Nhận diện ĐVVC, Lý do, Kho cho từng đơn
+
+Mọi đơn đọc từ file sàn được gắn thêm ĐVVC, Lý do, Kho (`js/core/nhan-dien.js`); danh sách "Sàn báo, kho chưa nhận" hiện thêm cột **ĐVVC** và **Lý do**.
+Giá trị đoán có nhãn *đoán* bên cạnh.
+
+| | ĐVVC | Lý do | Kho |
+| --- | --- | --- | --- |
+| Shopee giao thất bại | cột "Đơn Vị Vận Chuyển" (bỏ tiền tố Nhanh-, Hàng Cồng Kềnh-, Tiết kiệm-, Hỏa Tốc-) | "Giao thất bại" | cột "Tên kho hàng" → NVS / TSN / VL |
+| Shopee trả hàng | cột "Đơn vị vận chuyển trả hàng" (chiều về), trống thì đoán theo mã | cột "Lí do Trả hàng/Hoàn tiền" | "Chưa rõ" (không đoán) |
+| TikTok giao KTC | cột "Shipping Provider Name" | cột "Cancel Reason" | đoán theo tên SP |
+| TikTok trả hàng | đoán theo mã "Return Logistics Tracking ID" | cột "Return Reason" (dịch sang tiếng Việt) | đoán theo tên SP (tranh / liễn / khung → NVS, còn lại → VL) |
+
+Đoán ĐVVC theo mã: chứa `VTPVN` → Viettel Post; `SPXVN…` → SPX Express; `VNGH…` hoặc `GY` + 6 ký tự → GHN; `530` + 9 số → J&T Cargo;
+`85…`/`86…` đủ 12 số → J&T Express; còn lại "Chưa rõ". Mỗi mã vận đơn chỉ 1 dòng, kiện nhiều SKU gộp tên sản phẩm bằng ` | `.
+
+## Nút "🚚 Xuất file đòi ĐVVC"
+
+Có ở danh sách "Sàn báo, kho chưa nhận" (Shopee, TikTok) và ở tab Báo cáo hình (từ bảng đã dán). File Excel gồm:
+**Tổng hợp** (bảng kho × ĐVVC theo số kiện + ghi chú số kiện có ĐVVC / kho là đoán), **mỗi kho 1 sheet** nhóm theo ĐVVC (nút **Xuất theo ĐVVC** thì ngược lại: mỗi ĐVVC 1 sheet, trong sheet nhóm theo kho)
+(`STT | Mã vận đơn | ĐVVC | Gian | Loại | Mã đơn | Sản phẩm | Lý do | Tuần | Kho (thật/đoán)`, mã dạng chữ), và **Tin nhắn**
+(mỗi ô 1 tin soạn sẵn cho 1 kho × 1 ĐVVC). Trên trang, khối **Tin nhắn đòi ĐVVC** có nút **📋 Chép tin nhắn** cho từng kho × ĐVVC.
+
 ## File mẫu đơn thiếu và file xuất
 
-Một bộ cột duy nhất, đúng thứ tự:
+File mẫu (nút **Tải file mẫu**, mỗi tab sàn): tiêu đề + 1 dòng ví dụ (mã `012345678901`, tự bỏ qua khi nạp lại).
 
 ```
 Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee/TikTok | Loại tệp tin | Tên sản phẩm | Phân loại
 ```
 
-- Nút **Tải file mẫu** (mỗi tab sàn): tiêu đề + 1 dòng ví dụ (mã `012345678901`, tự bỏ qua khi nạp lại).
-- Nút **Xuất "Sàn báo, kho chưa nhận"**: cùng bộ cột, `Tuần đối soát` = tuần ISO ngày xuất (vd `Tuần 44/2026`), cột `KHO` để trống.
+File xuất **"Sàn báo, kho chưa nhận"**: đúng thứ tự cột của Google Sheet theo dõi, dán thẳng vào được.
+
+```
+Tuần đối soát | KHO | Mã vận đơn | Gian hàng | Loại tệp tin | Tên sản phẩm | Phân loại | Thời gian trả trên hệ thống | ĐVVC | Lý do
+```
+
+- Nút xuất hỏi **Tuần đối soát**: điền sẵn theo khoảng ngày trong file (dạng `02/11 - 08/11`), sửa được; file không có ngày thì lấy tuần Thứ Hai - Chủ Nhật vừa qua.
+- Nút **📋 Chép bảng**: chép cùng bảng đó dạng TSV có tiêu đề, dán thẳng vào Google Sheets.
 - Cột `Mã vận đơn` luôn khoá định dạng Text, nên Excel không đổi mã 12 số thành `8.6233E+11`.
-- Khi nạp lại: nhận cả `Gian hàng Shopee` lẫn `Gian hàng TikTok`, đọc cột `KHO` nguyên văn, và vẫn nhận file xuất cũ của công cụ gốc.
+- Khi nạp lại: nhận cả hai bộ cột (`Gian hàng`, `Gian hàng Shopee`, `Gian hàng TikTok`), đọc lại `KHO`, `ĐVVC`, `Lý do`, và vẫn nhận file xuất cũ của công cụ gốc.
 
 ## Cấu trúc
 
@@ -56,6 +86,7 @@ Tuần đối soát | KHO | Mã vận đơn | Gian hàng Shopee/TikTok | Loại 
 index.html              trang duy nhất (4 tab)
 css/themes.css          6 bộ biến màu (3 chủ đề × Sáng/Tối)
 css/app.css             giao diện, chỉ dùng biến
+css/bao-cao.css         thẻ báo cáo hình: màu cố định, không theo chủ đề
 js/config.js            API_URL: chỗ duy nhất cần sửa sau khi deploy
 js/theme.js             chủ đề: nạp trong <head>, áp màu trước khi vẽ; hộp chọn 🎨
 js/core/                logic thuần, không đụng DOM, có test
@@ -66,16 +97,20 @@ js/core/                logic thuần, không đụng DOM, có test
   trang-thai.js         mô hình trạng thái: mã cần chuyển 'khop', nhãn loại file, tìm một mã
   da-doi-soat.js        tab Đã đối soát: danh sách, bộ lọc, xuất Excel
   template.js           bộ cột file mẫu / file xuất, đọc lại file
+  doi-dvvc.js           file Excel + tin nhắn đòi ĐVVC (kho × ĐVVC)
+  bao-cao.js            tab Báo cáo hình: đọc bảng dán (TSV), chuẩn hoá tuần / gian / loại / lý do, tính số liệu, bản chữ
+  nhan-dien.js          ĐVVC, Lý do, Kho cho từng đơn; gộp mỗi mã 1 dòng
 js/api.js               gọi Web app + giữ bản kho mới nhất
 js/ui.js                toast, hộp thoại, phân trang, kéo thả, tên người dùng
 js/kho-sync.js          tải kho trước khi đối soát, xác nhận và xoá mã đã khớp
-js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, app.js   giao diện từng tab
+js/xuat-thieu.js        nút xuất / chép của danh sách "Sàn báo, kho chưa nhận" (hỏi Tuần đối soát)
+js/kho-tab.js, shopee.js, tiktok.js, da-doi-soat-tab.js, bao-cao-tab.js, app.js   giao diện từng tab
 apps-script/Code.gs     backend Google Apps Script
 tests/                  test Node (node --test) + e2e Playwright
 goc/                    hai công cụ gốc, giữ lại để đối chiếu
 ```
 
-xlsx 0.18.5 và Chart.js 4.4.1 tải từ cdnjs như bản gốc. Không có bước build: sửa file rồi push là xong.
+xlsx 0.18.5, Chart.js 4.4.1 và html2canvas 1.4.1 (chụp thẻ báo cáo thành PNG) tải từ cdnjs, ghim phiên bản. Không có bước build: sửa file rồi push là xong.
 
 ## Chạy test
 

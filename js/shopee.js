@@ -17,6 +17,8 @@ var resultMissA = [], resultMissB = [];
 var searchStrA = "", searchStrB = "";
 var pageA = 1, pageB = 1;
 // Tab con "Đã khớp kho": mã trong chứng từ có trong kho (cả mã đã khớp từ trước).
+// Thời gian của mọi đơn trong file sàn: để điền sẵn "Tuần đối soát" khi xuất.
+var allTimes = [];
 var resultKhop = [], searchStrC = '', pageC = 1, khopNote = null;
 var running = false;
 const pageSize = 10;
@@ -102,6 +104,7 @@ async function runMatchInner() {
   var matchCount = R.matchCount, rate = R.rate, refundOnlyCount = R.refundOnlyCount, noTidCount = R.noTidCount;
 
   resultMissA = missA; resultMissB = missB;
+  allTimes = records.map(function (x) { return x.time; });
   pageA = 1; pageB = 1;
   resultKhop = KhopKho.list(R, khoRows, T.khop); pageC = 1; searchStrC = ''; _$('searchC').value = '';
   _$('searchA').value = '';
@@ -257,9 +260,10 @@ function renderTableA() {
     return r.tid.toLowerCase().indexOf(searchStrA) >= 0 || r.shop.toLowerCase().indexOf(searchStrA) >= 0;
   });
   _$('cntA').textContent = '('+filtered.length+')';
-  _$('btnExportA').style.display = resultMissA.length ? 'inline-flex' : 'none';
+  _$('actA').style.display = resultMissA.length ? 'flex' : 'none';
+  XuatThieu.veTinNhan(_$('dvvcBox'), XuatThieu.dvvcItems('shopee', resultMissA, allTimes));
   if (!filtered.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10"><span class="emo" aria-hidden="true">✅</span> Tất cả mã Shopee đều đã có hàng về kho</td></tr>';
     pager.innerHTML = ''; return;
   }
   var totalPages = Math.ceil(filtered.length/pageSize), start = (pageA-1)*pageSize;
@@ -269,9 +273,9 @@ function renderTableA() {
       '<td><span class="type-tag">'+esc(TrangThai.loaiCuaDong(r))+'</span></td>'+
       '<td><code>'+esc(r.tid)+'</code></td>'+
       '<td><code style="opacity:.7">'+esc(r.oid||'—')+'</code></td>'+
-      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">'+esc(r.prod||'—')+'</td>'+
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(r.prod||'')+'">'+esc(r.prod||'—')+'</td>'+
       '<td>'+esc(r.prov||'—')+'</td>'+
-      '<td>'+esc(r.kho||'—')+'</td></tr>';
+      UI.ndCells(r)+'</tr>';
   }).join('');
   UI.renderPager(pager, pageA, totalPages, function(p){ pageA=p; renderTableA(); });
 }
@@ -346,15 +350,11 @@ function switchTab(paneId, btn) {
 }
 
 /* =================== XUẤT EXCEL =================== */
-// "Sàn báo, kho chưa nhận" -> đúng bộ cột của file mẫu đơn thiếu.
-function exportExcelA() {
-  if (!resultMissA.length) { alert('Không có mã nào để xuất!'); return; }
-  var recs = resultMissA.map(function(r) {
-    return { tid: r.tid, shop: r.shop, typeLabel: TrangThai.loaiCuaDong(r), prod: r.prod, variant: r.variant };
-  });
-  UI.downloadWb(Template.buildExportWorkbook('shopee', recs, new Date()),
-    'Shopee_chua_ve_kho_'+new Date().toISOString().slice(0,10)+'.xlsx');
-}
+// "Sàn báo, kho chưa nhận": hỏi Tuần đối soát rồi xuất / chép đúng bộ cột của bảng theo dõi.
+function exportExcelA() { return XuatThieu.xuat('shopee', resultMissA, allTimes); }
+function copyTableA() { return XuatThieu.chep('shopee', resultMissA, allTimes); }
+function exportDvvc(theo) { return XuatThieu.doiDvvc('shopee', resultMissA, allTimes, theo); }
+
 function exportExcelB() {
   if (!resultMissB.length) { alert('Không có mã nào để xuất!'); return; }
   var rows = resultMissB.map(function(m, i) {
@@ -384,7 +384,7 @@ function init() {
   renderAll();
 }
 
-return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
+return { init: init, renderAll: renderAll, runMatch: runMatch, switchTab: switchTab, exportExcelA: exportExcelA, copyTableA: copyTableA, exportDvvc: exportDvvc, exportExcelB: exportExcelB, exportExcelC: exportExcelC, handleSearchC: handleSearchC,
          downloadTemplate: downloadTemplate, handleSearchA: handleSearchA, handleSearchB: handleSearchB,
          removeFile: removeFile, applyChartTheme: applyChartTheme };
 })();

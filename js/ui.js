@@ -41,14 +41,45 @@ var UI = (function () {
       function onKey(e) { if (e.key === 'Escape') close(null); }
       function close(v) {
         document.removeEventListener('keydown', onKey);
+        var inp = back.querySelector('.modal-input');
+        lastInput = inp ? inp.value : null;
         back.remove();
         resolve(v);
       }
       back.addEventListener('click', function (e) { if (e.target === back) close(null); });
       document.addEventListener('keydown', onKey);
       document.body.appendChild(back);
-      (focusBtn || actions.querySelector('button')).focus();
+      var inp0 = back.querySelector('.modal-input');
+      if (inp0) {
+        inp0.addEventListener('keydown', function (e) { if (e.key === 'Enter' && focusBtn) { e.preventDefault(); focusBtn.click(); } });
+        inp0.focus(); inp0.select();
+      } else (focusBtn || actions.querySelector('button')).focus();
     });
+  }
+  // Hộp hỏi một dòng chữ (điền sẵn `value`, sửa được). Trả về Promise<string|null>; Huỷ / Esc = null.
+  var lastInput = null;
+  function promptBox(title, html, value, okLabel) {
+    return choose(title, html + '<input type="text" class="text-input modal-input" maxlength="60" value="' + esc(value || '') + '">', [
+      { label: 'Huỷ', value: false, kind: 'secondary' },
+      { label: okLabel || 'Đồng ý', value: true, kind: 'primary', focus: true }
+    ]).then(function (v) { return v === true ? String(lastInput || '').trim() : null; });
+  }
+  // Chép chữ vào bộ nhớ tạm; trình duyệt cũ / không có quyền thì dùng cách chọn-và-copy.
+  function copyText(text) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      return ok;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallback(); });
+    }
+    return Promise.resolve(fallback());
   }
   function confirmBox(title, html, okLabel, danger) {
     return choose(title, html, [
@@ -120,6 +151,15 @@ var UI = (function () {
     });
   }
 
+  /* ---------- 3 ô KHO · ĐVVC · Lý do của bảng "Sàn báo, kho chưa nhận" ---------- */
+  function doanTag(nguon) { return nguon === NhanDien.DOAN ? ' <span class="type-tag nd-doan">đoán</span>' : ''; }
+  function ndCells(r) {
+    var ly = r.lyDo || '';
+    return '<td>' + esc(r.kho || NhanDien.CHUA_RO) + doanTag(r.khoNguon) + '</td>' +
+      '<td>' + esc(r.dvvcTen || NhanDien.CHUA_RO) + doanTag(r.dvvcNguon) + '</td>' +
+      '<td class="nd-lydo" title="' + esc(ly) + '">' + esc(ly || '—') + '</td>';
+  }
+
   function fmtIso(iso) {
     var d = new Date(iso);
     return isNaN(d.getTime()) ? String(iso || '') : Common.fmtDT(d);
@@ -136,9 +176,9 @@ var UI = (function () {
   }
 
   return {
-    toast: toast, choose: choose, confirm: confirmBox, alert: alertBox, renderPager: renderPager,
+    toast: toast, choose: choose, confirm: confirmBox, alert: alertBox, prompt: promptBox, copyText: copyText, renderPager: renderPager,
     setupDropZone: setupDropZone, memSet: memSet, memGet: memGet, memDel: memDel,
     fmtIso: fmtIso, fileItemHtml: fileItemHtml, bindFileFields: bindFileFields,
-    downloadWb: downloadWb, guideHtml: guideHtml, esc: esc
+    downloadWb: downloadWb, guideHtml: guideHtml, esc: esc, ndCells: ndCells
   };
 })();
